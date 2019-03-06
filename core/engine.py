@@ -82,16 +82,11 @@ class Engine(object):
         """ повернуть вниз """
         self.__change_direction(1, 0)
 
-    def __calc_pos(self, top, left):
-        """ вычисляет реальные координаты всех точек змейки на поле от заданной точки по смещениям координат """
-        pass
-        # return [[centerTop + offset[0], centerLeft + offset[1]] for offset in self.__snake]
-
-    def __check_pos(self, pos):
+    def __check_pos(self, pos, to_eats=False):
         """ Проверяет, свободны ли на доске точки с заданными координатами """
         for coord in pos:
             if coord[0] < 0 or coord[0] >= self.__height or coord[1] < 0 or coord[1] >= self.__width \
-                or self.__terrarium[coord[0]][coord[1]] > 1:
+                or self.__terrarium[coord[0]][coord[1]] > 0 if to_eats else 1:
                 return False
 
         return True
@@ -107,7 +102,20 @@ class Engine(object):
             while self.__locked:
                 pass
 
-            #todo: не забыть тут же сделать появление еды через каждые n шагов
             self.__locked = True
+
+            # появление еды через каждые n шагов
+            self.__to_rise -= 1
+
+            if self.__to_rise <= 0:
+                self.__to_rise = self.EATS_RAISE_INTERVAL
+                top = random.randint(0, self.__height)
+                left = random.randint(0, self.__width)
+
+                while not self.__check_pos((top, left), to_eats=True):
+                    top = random.randint(0, self.__height)
+                    left = random.randint(0, self.__width)
+
+                self.__terrarium[top][left] = FIELD_TYPE_EATS
         finally:
             self.__locked = False
