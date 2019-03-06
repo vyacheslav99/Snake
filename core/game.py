@@ -14,7 +14,7 @@ class Tetris(QMainWindow):
         self.box = GameBox(self)
         self.setCentralWidget(self.box)
         self.setWindowIcon(QIcon('app.ico'))
-        self.setWindowTitle('Snake')
+        self.setWindowTitle('Удавчик')
 
         self.statusbar = self.statusBar()
         self.box.msg2Statusbar[str].connect(self.statusbar.showMessage)
@@ -35,8 +35,8 @@ class GameBox(QFrame):
 
     msg2Statusbar = pyqtSignal(str)
     InitialSpeed = 1000
-    AccInterval = 1000 * 60
-    Accelerator = 0.8
+    AccInterval = 2000 * 60
+    Accelerator = 0.9
     BoxWidth = 30
     BoxHeight = 30
 
@@ -56,7 +56,7 @@ class GameBox(QFrame):
             self.stop()
 
         self.engine.clear()
-        self.msg2Statusbar.emit(f'Lenght: {self.engine.length()}, Eaten: {self.engine.eaten()}')
+        self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
         self.isPaused = False
         self.isStarted = True
         self.speed = self.InitialSpeed
@@ -65,7 +65,7 @@ class GameBox(QFrame):
         self.acc_timer.start(self.AccInterval, self)
         self.update()
 
-    def stop(self):
+    def stop(self, message='Кабздец!'):
         if not self.isStarted:
             return
 
@@ -73,7 +73,7 @@ class GameBox(QFrame):
         self.acc_timer.stop()
         self.isStarted = False
         self.isPaused = False
-        self.msg2Statusbar.emit(f'Game Over!   Lenght: {self.engine.length()}, Eaten: {self.engine.eaten()}')
+        self.msg2Statusbar.emit(f'{message}   Размер: {self.engine.length()}')
         self.update()
 
     def pause(self):
@@ -85,10 +85,10 @@ class GameBox(QFrame):
         if self.isPaused:
             self.timer.stop()
             self.acc_timer.stop()
-            self.msg2Statusbar.emit('-= PAUSED =-')
+            self.msg2Statusbar.emit('-= ПАУЗА =-')
             self.update()
         else:
-            self.msg2Statusbar.emit(f'Lenght: {self.engine.length()}, Eaten: {self.engine.eaten()}')
+            self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
             self.timer.start(self.speed, self)
             self.acc_timer.start(self.AccInterval, self)
 
@@ -131,7 +131,7 @@ class GameBox(QFrame):
             else:
                 super(GameBox, self).keyPressEvent(event)
         except engine.StopGameException as e:
-            self.stop()
+            self.stop(str(e))
         finally:
             self.update_ui()
 
@@ -147,7 +147,7 @@ class GameBox(QFrame):
             else:
                 super(GameBox, self).timerEvent(event)
         except engine.StopGameException as e:
-            self.stop()
+            self.stop(str(e))
         finally:
             self.update_ui()
 
@@ -158,12 +158,12 @@ class GameBox(QFrame):
 
     def update_ui(self):
         if self.isStarted and not self.isPaused:
-            self.msg2Statusbar.emit(f'Lenght: {self.engine.length()}, Eaten: {self.engine.eaten()}')
+            self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
         self.update()
 
     def draw_square(self, w, h, sq_type):
         """ отрисовка квадратика """
-        colors = (0xECE9D8, 0xCD2990, 0x8B1A1A, 0x008B00)
+        colors = (0xECE9D8, 0xCD2990, 0x8B1A1A, 0x008B00, 0x000000, 0x5E6965)
         color_hex = colors[sq_type]
         #todo: сделать расчет градиента для тела и случайного цвета еды
 
