@@ -1,3 +1,4 @@
+import random
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QFrame
 from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
 from PyQt5.QtGui import QPainter, QColor, QIcon
@@ -163,14 +164,12 @@ class GameBox(QFrame):
 
     def draw_square(self, w, h, sq_type):
         """ отрисовка квадратика """
-        colors = (0xECE9D8, 0xCD2990, 0x8B1A1A, 0x008B00, 0x000000, 0x5E6965)
-        color_hex = colors[sq_type]
-        #todo: сделать расчет градиента для тела и случайного цвета еды
+        colors = (0xECE9D8, 0xEE7621, 0x458B00, 0x66CD00, 0x171717, 0x5E6965)
 
         painter = QPainter(self)
-        color = QColor(color_hex)
+        color = QColor(colors[sq_type])
 
-        if sq_type == 0:
+        if sq_type == engine.FIELD_TYPE_NONE:
             painter.fillRect(w, h, self.scale_width(), self.scale_height(), color)
             return
 
@@ -180,6 +179,6 @@ class GameBox(QFrame):
         painter.drawLine(w, h + self.scale_height() - 1, w, h)
         painter.drawLine(w, h, w + self.scale_width() - 1, h)
 
-        painter.setPen(color.darker())
+        painter.setPen(color.darker(150))
         painter.drawLine(w + 1, h + self.scale_height() - 1, w + self.scale_width() - 1, h + self.scale_height() - 1)
         painter.drawLine(w + self.scale_width() - 1, h + self.scale_height() - 1, w + self.scale_width() - 1, h + 1)
