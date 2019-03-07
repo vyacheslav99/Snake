@@ -26,7 +26,7 @@ class Engine(object):
         self._to_rise = 0
 
         # матрица игрового поля, содержит тип фигуры в заданной точке
-        self._terrarium = []
+        self._area = []
 
         # набор координат точек, при прохождении через которые, меняется направление движения, и собственно
         # флаги изменения направления
@@ -44,8 +44,8 @@ class Engine(object):
             self._to_rise = self.EATS_RAISE_INTERVAL
             self._boa = [[1, self._width // 2], [0, self._width // 2]]
             self._boa_moves = [[1, 0], [1, 0]]
-            self._terrarium[self._boa[0][0]][self._boa[0][1]] = FIELD_TYPE_HEAD
-            self._terrarium[self._boa[1][0]][self._boa[1][1]] = FIELD_TYPE_BODY
+            self._area[self._boa[0][0]][self._boa[0][1]] = FIELD_TYPE_HEAD
+            self._area[self._boa[1][0]][self._boa[1][1]] = FIELD_TYPE_BODY
             self._create_barriers()
 
     def clear(self):
@@ -53,10 +53,10 @@ class Engine(object):
         self._boa = []
         self._boa_moves = []
         self._direct_points = {}
-        self._terrarium = [[FIELD_TYPE_NONE for col in range(self._width)] for row in range(self._height)]
+        self._area = [[FIELD_TYPE_NONE for col in range(self._width)] for row in range(self._height)]
 
     def cell(self, top, left):
-        return self._terrarium[top][left]
+        return self._area[top][left]
 
     def length(self):
         return len(self._boa)
@@ -91,15 +91,15 @@ class Engine(object):
 
             for i in range(random.randint(1, 8)):
                 if i == 0:
-                    self._terrarium[top][left] = el_type
+                    self._area[top][left] = el_type
                 else:
                     t, l = top + of_top * i, left + of_left * i
                     if self._check_pos(t, l):
-                        self._terrarium[t][l] = el_type
+                        self._area[t][l] = el_type
 
     def _check_pos(self, top, left):
         """ Проверяет, свободны ли на доске точки с заданными координатами """
-        if top < 0 or top >= self._height or left < 0 or left >= self._width or self._terrarium[top][left] > 1:
+        if top < 0 or top >= self._height or left < 0 or left >= self._width or self._area[top][left] > 1:
             return False
 
         return True
@@ -107,25 +107,30 @@ class Engine(object):
     def _check_pos_raise(self, top, left):
         if top < 0 or top >= self._height or left < 0 or left >= self._width:
             raise StopGameException('Удавчик убился об стену!')
-        if self._terrarium[top][left] == FIELD_TYPE_BODY:
+        if self._area[top][left] == FIELD_TYPE_BODY:
             if self._boa[1] == [top, left]:
                 raise StopGameException('Удавчик свернулся внутрь себя!')
             else:
                 raise StopGameException('Удавчик съел сам себя!')
-        if self._terrarium[top][left] == FIELD_TYPE_HOLE:
+        if self._area[top][left] == FIELD_TYPE_HOLE:
             raise StopGameException('Удавчик провалился в дыру!')
-        if self._terrarium[top][left] == FIELD_TYPE_ROCK:
+        if self._area[top][left] == FIELD_TYPE_ROCK:
             raise StopGameException('Удавчик протаранил скалу!')
 
     def _change_direction(self, horiz, vert):
         """ изменяет направление движения в заданной точке"""
+
+        # исключим вариант поворота на 180% (т.е. внутрь себя)
+        if [horiz * -1, vert * -1] == self._boa_moves[0]:
+            return
+
         self._direct_points[tuple(self._boa[0])] = [horiz, vert]
 
     def _rand_coord(self, cell_type, top_min, top_max, left_min, left_max):
         top = random.randint(top_min, top_max)
         left = random.randint(left_min, left_max)
 
-        while not self._check_pos(top, left) or self._terrarium[top][left] == cell_type:
+        while not self._check_pos(top, left) or self._area[top][left] == cell_type:
             top = random.randint(top_min, top_max)
             left = random.randint(left_min, left_max)
 
@@ -134,7 +139,7 @@ class Engine(object):
     def _check_to_win(self):
         for top in range(self._width):
             for left in range(self._height):
-                if self._terrarium[top][left] == FIELD_TYPE_NONE:
+                if self._area[top][left] == FIELD_TYPE_NONE:
                     return False
 
         return True
@@ -167,17 +172,17 @@ class Engine(object):
                     self._check_pos_raise(*self._boa[i])
 
                     # если в новом месте жратва - надо будет удлинить хвост
-                    if self._terrarium[self._boa[i][0]][self._boa[i][1]] == FIELD_TYPE_EATS:
+                    if self._area[self._boa[i][0]][self._boa[i][1]] == FIELD_TYPE_EATS:
                         prolong = True
 
             if prolong:
                 self._boa.append(last)
                 self._boa_moves.append(copy.copy(self._boa_moves[len(self._boa_moves)-1]))
             else:
-                self._terrarium[last[0]][last[1]] = FIELD_TYPE_NONE
+                self._area[last[0]][last[1]] = FIELD_TYPE_NONE
 
             for i, coord in enumerate(self._boa):
-                self._terrarium[coord[0]][coord[1]] = FIELD_TYPE_HEAD if i == 0 else FIELD_TYPE_BODY
+                self._area[coord[0]][coord[1]] = FIELD_TYPE_HEAD if i == 0 else FIELD_TYPE_BODY
 
             # проверить, вдруг победил
             if self._check_to_win():
@@ -189,6 +194,6 @@ class Engine(object):
             if self._to_rise <= 0:
                 self._to_rise = self.EATS_RAISE_INTERVAL
                 top, left = self._rand_coord(FIELD_TYPE_EATS, 0, self._height - 1, 0, self._width - 1)
-                self._terrarium[top][left] = FIELD_TYPE_EATS
+                self._area[top][left] = FIELD_TYPE_EATS
         finally:
             self._locked = False
