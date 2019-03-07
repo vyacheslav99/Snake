@@ -109,7 +109,7 @@ class Engine(object):
             raise StopGameException('Удавчик убился об стену!')
         if self._terrarium[top][left] == FIELD_TYPE_BODY:
             if self._boa[1] == [top, left]:
-                raise StopGameException('Удавчик схлопнулся в сингулярность!')
+                raise StopGameException('Удавчик свернулся внутрь себя!')
             else:
                 raise StopGameException('Удавчик съел сам себя!')
         if self._terrarium[top][left] == FIELD_TYPE_HOLE:
@@ -130,6 +130,14 @@ class Engine(object):
             left = random.randint(left_min, left_max)
 
         return top, left
+
+    def _check_to_win(self):
+        for top in range(self._width):
+            for left in range(self._height):
+                if self._terrarium[top][left] == FIELD_TYPE_NONE:
+                    return False
+
+        return True
 
     def _try_move(self):
         """ Центральный метод игры, обработка шага игры """
@@ -170,6 +178,10 @@ class Engine(object):
 
             for i, coord in enumerate(self._boa):
                 self._terrarium[coord[0]][coord[1]] = FIELD_TYPE_HEAD if i == 0 else FIELD_TYPE_BODY
+
+            # проверить, вдруг победил
+            if self._check_to_win():
+                raise StopGameException('Ура! Победа!')
 
             # появление еды через каждые n шагов
             self._to_rise -= 1
