@@ -109,12 +109,12 @@ class Engine(object):
     def _create_barriers(self):
         """ накидывает на поле несколько случайных препятствий """
         for _ in range(random.randint(0, self._width * self._height / 100)):
-            top, left = self._rand_coord(FIELD_GROUP_BARRIER, 0, self._height - 1, 0, self._width - 1)
+            top, left = self._rand_coord(FIELD_GROUP_BARRIER)
             of_top = random.choice((-1, 0, 1))
             of_left = random.choice((-1, 0, 1))
             el_type = random.choice(AreaTypes[FIELD_GROUP_BARRIER])
 
-            for i in range(random.randint(1, 8)):
+            for i in range(random.randint(1, 6)):
                 if i == 0:
                     self._area[top][left] = el_type
                 else:
@@ -123,7 +123,7 @@ class Engine(object):
                         self._area[t][l] = el_type
 
     def _add_eat(self):
-        top, left = self._rand_coord(FIELD_GROUP_EATS, 0, self._height - 1, 0, self._width - 1)
+        top, left = self._rand_coord(FIELD_GROUP_EATS)
         self._area[top][left] = random.choice(AreaTypes[FIELD_GROUP_EATS])
 
     def _check_pos(self, top, left):
@@ -148,22 +148,18 @@ class Engine(object):
 
     def _change_direction(self, horiz, vert):
         """ изменяет направление движения в заданной точке"""
-
-        # исключим вариант поворота на 180% (т.е. внутрь себя)
         if [horiz * -1, vert * -1] == self._boa_moves[0]:
+            # исключим вариант поворота на 180% (т.е. внутрь себя)
             return
 
         self._direct_points[tuple(self._boa[0])] = [horiz, vert]
 
-    def _rand_coord(self, cell_type_group, top_min, top_max, left_min, left_max):
-        top = random.randint(top_min, top_max)
-        left = random.randint(left_min, left_max)
+    def _rand_coord(self, cell_type_group):
+        coords = tuple((t, l) for t in range(self._width) for l in range(self._height)
+                  if self._check_pos(t, l) and self._area[t][l] not in AreaTypes[cell_type_group])
 
-        while not self._check_pos(top, left) or self._area[top][left] in AreaTypes[cell_type_group]:
-            top = random.randint(top_min, top_max)
-            left = random.randint(left_min, left_max)
-
-        return top, left
+        res = random.choice(coords)
+        return res[0], res[1]
 
     def _check_to_win(self):
         for top in range(self._width):
@@ -215,7 +211,7 @@ class Engine(object):
 
             # проверить, вдруг победил
             if self._check_to_win():
-                raise StopGameException('Ура! Победа!')
+                raise StopGameException('Удавчик заполнил все! Победа!')
 
             # появление еды через каждые n шагов
             self._to_rise -= 1

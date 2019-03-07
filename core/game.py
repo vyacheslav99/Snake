@@ -20,7 +20,7 @@ class Tetris(QMainWindow):
         self.statusbar = self.statusBar()
         self.box.msg2Statusbar[str].connect(self.statusbar.showMessage)
 
-        self.resize(600, 600)
+        self.resize(380, 385)
         self.center()
         self.show()
 
@@ -38,8 +38,8 @@ class GameBox(QFrame):
     InitialSpeed = 1000
     AccInterval = 2000 * 60
     Accelerator = 0.9
-    BoxWidth = 30
-    BoxHeight = 30
+    BoxWidth = 20
+    BoxHeight = 20
 
     def __init__(self, parent):
         super().__init__(parent)
