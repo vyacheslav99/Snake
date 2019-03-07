@@ -2,11 +2,29 @@ import random
 import copy
 
 FIELD_TYPE_NONE = 0
-FIELD_TYPE_EATS = 1
-FIELD_TYPE_HEAD = 2
-FIELD_TYPE_BODY = 3
-FIELD_TYPE_HOLE = 4
-FIELD_TYPE_ROCK = 5
+FIELD_TYPE_EATS1 = 1
+FIELD_TYPE_EATS2 = 2
+FIELD_TYPE_EATS3 = 3
+FIELD_TYPE_EATS4 = 4
+FIELD_TYPE_EATS5 = 5
+FIELD_TYPE_HEAD = 6
+FIELD_TYPE_BODY = 7
+FIELD_TYPE_HOLE = 8
+FIELD_TYPE_ROCK = 9
+
+FIELD_GROUP_EMPTY = 'empty'
+FIELD_GROUP_BOA = 'boa'
+FIELD_GROUP_EATS = 'eats'
+FIELD_GROUP_BARRIER = 'barrier'
+
+AreaTypes = {
+    FIELD_GROUP_EMPTY: (FIELD_TYPE_NONE,),
+    FIELD_GROUP_BOA: (FIELD_TYPE_HEAD, FIELD_TYPE_BODY),
+    FIELD_GROUP_EATS: (FIELD_TYPE_EATS1, FIELD_TYPE_EATS2, FIELD_TYPE_EATS3, FIELD_TYPE_EATS4, FIELD_TYPE_EATS5),
+    FIELD_GROUP_BARRIER: (FIELD_TYPE_HOLE, FIELD_TYPE_ROCK)
+}
+
+DEATH_TYPES = AreaTypes[FIELD_GROUP_BOA] + AreaTypes[FIELD_GROUP_BARRIER]
 
 
 class StopGameException(Exception):
@@ -47,6 +65,7 @@ class Engine(object):
             self._area[self._boa[0][0]][self._boa[0][1]] = FIELD_TYPE_HEAD
             self._area[self._boa[1][0]][self._boa[1][1]] = FIELD_TYPE_BODY
             self._create_barriers()
+            self._add_eat()
 
     def clear(self):
         self._locked = False
@@ -81,13 +100,19 @@ class Engine(object):
         """ повернуть вниз """
         self._change_direction(1, 0)
 
+    def body_index(self, top, left):
+        try:
+            return self._boa.index([top, left]) - 1
+        except Exception:
+            return 0
+
     def _create_barriers(self):
         """ накидывает на поле несколько случайных препятствий """
         for _ in range(random.randint(0, self._width * self._height / 100)):
-            top, left = self._rand_coord(FIELD_TYPE_HEAD, 0, self._height - 1, 0, self._width - 1)
+            top, left = self._rand_coord(FIELD_GROUP_BARRIER, 0, self._height - 1, 0, self._width - 1)
             of_top = random.choice((-1, 0, 1))
             of_left = random.choice((-1, 0, 1))
-            el_type = random.choice([FIELD_TYPE_HOLE, FIELD_TYPE_ROCK])
+            el_type = random.choice(AreaTypes[FIELD_GROUP_BARRIER])
 
             for i in range(random.randint(1, 8)):
                 if i == 0:
@@ -97,9 +122,13 @@ class Engine(object):
                     if self._check_pos(t, l):
                         self._area[t][l] = el_type
 
+    def _add_eat(self):
+        top, left = self._rand_coord(FIELD_GROUP_EATS, 0, self._height - 1, 0, self._width - 1)
+        self._area[top][left] = random.choice(AreaTypes[FIELD_GROUP_EATS])
+
     def _check_pos(self, top, left):
         """ Проверяет, свободны ли на доске точки с заданными координатами """
-        if top < 0 or top >= self._height or left < 0 or left >= self._width or self._area[top][left] > 1:
+        if top < 0 or top >= self._height or left < 0 or left >= self._width or self._area[top][left] in DEATH_TYPES:
             return False
 
         return True
@@ -126,11 +155,11 @@ class Engine(object):
 
         self._direct_points[tuple(self._boa[0])] = [horiz, vert]
 
-    def _rand_coord(self, cell_type, top_min, top_max, left_min, left_max):
+    def _rand_coord(self, cell_type_group, top_min, top_max, left_min, left_max):
         top = random.randint(top_min, top_max)
         left = random.randint(left_min, left_max)
 
-        while not self._check_pos(top, left) or self._area[top][left] == cell_type:
+        while not self._check_pos(top, left) or self._area[top][left] in AreaTypes[cell_type_group]:
             top = random.randint(top_min, top_max)
             left = random.randint(left_min, left_max)
 
@@ -139,7 +168,7 @@ class Engine(object):
     def _check_to_win(self):
         for top in range(self._width):
             for left in range(self._height):
-                if self._area[top][left] == FIELD_TYPE_NONE:
+                if self._area[top][left] in AreaTypes[FIELD_GROUP_EMPTY] + AreaTypes[FIELD_GROUP_EATS]:
                     return False
 
         return True
@@ -172,7 +201,7 @@ class Engine(object):
                     self._check_pos_raise(*self._boa[i])
 
                     # если в новом месте жратва - надо будет удлинить хвост
-                    if self._area[self._boa[i][0]][self._boa[i][1]] == FIELD_TYPE_EATS:
+                    if self._area[self._boa[i][0]][self._boa[i][1]] in AreaTypes[FIELD_GROUP_EATS]:
                         prolong = True
 
             if prolong:
@@ -193,7 +222,6 @@ class Engine(object):
 
             if self._to_rise <= 0:
                 self._to_rise = self.EATS_RAISE_INTERVAL
-                top, left = self._rand_coord(FIELD_TYPE_EATS, 0, self._height - 1, 0, self._width - 1)
-                self._area[top][left] = FIELD_TYPE_EATS
+                self._add_eat()
         finally:
             self._locked = False

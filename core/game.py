@@ -155,16 +155,30 @@ class GameBox(QFrame):
     def paintEvent(self, event):
         for i in range(self.BoxHeight):
             for j in range(self.BoxWidth):
-                self.draw_square(j * self.scale_width(), i * self.scale_height(), self.engine.cell(i, j))
+                self.draw_square(j, i, self.engine.cell(i, j))
 
     def update_ui(self):
         if self.isStarted and not self.isPaused:
             self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
         self.update()
 
-    def draw_square(self, w, h, sq_type):
+    def draw_square(self, left, top, sq_type):
         """ отрисовка квадратика """
-        colors = (0xECE9D8, 0xEE7621, 0x458B00, 0x66CD00, 0x171717, 0x5E6965)
+        colors = {
+            engine.FIELD_TYPE_NONE: 0xECE9D8,
+            engine.FIELD_TYPE_EATS1: 0xEE7621,
+            engine.FIELD_TYPE_EATS2: 0xEE6A50,
+            engine.FIELD_TYPE_EATS3: 0x00CDCD,
+            engine.FIELD_TYPE_EATS4: 0xB23AEE,
+            engine.FIELD_TYPE_EATS5: 0xEE1289,
+            engine.FIELD_TYPE_HEAD: 0x008B00,
+            engine.FIELD_TYPE_BODY: 0x66CD00,
+            engine.FIELD_TYPE_HOLE: 0x171717,
+            engine.FIELD_TYPE_ROCK: 0x5E6965
+        }
+
+        w = left * self.scale_width()
+        h = top * self.scale_height()
 
         painter = QPainter(self)
         color = QColor(colors[sq_type])
@@ -172,6 +186,9 @@ class GameBox(QFrame):
         if sq_type == engine.FIELD_TYPE_NONE:
             painter.fillRect(w, h, self.scale_width(), self.scale_height(), color)
             return
+        elif sq_type == engine.FIELD_TYPE_BODY:
+            coef = self.engine.body_index(top, left) * 10
+            color.setGreen(color.green() + coef)
 
         painter.fillRect(w + 1, h + 1, self.scale_width() - 2, self.scale_height() - 2, color)
 
