@@ -166,11 +166,11 @@ class GameBox(QFrame):
         """ отрисовка квадратика """
         colors = {
             engine.FIELD_TYPE_NONE: 0xECE9D8,
-            engine.FIELD_TYPE_EATS1: 0xEE7621,
-            engine.FIELD_TYPE_EATS2: 0xEE6A50,
+            engine.FIELD_TYPE_EATS1: 0xFF4500,
+            engine.FIELD_TYPE_EATS2: 0xEEEE00,
             engine.FIELD_TYPE_EATS3: 0x00CDCD,
-            engine.FIELD_TYPE_EATS4: 0xB23AEE,
-            engine.FIELD_TYPE_EATS5: 0xEE1289,
+            engine.FIELD_TYPE_EATS4: 0x0000CD,
+            engine.FIELD_TYPE_EATS5: 0xCD0000,
             engine.FIELD_TYPE_HEAD: 0x008B00,
             engine.FIELD_TYPE_BODY: 0x66CD00,
             engine.FIELD_TYPE_HOLE: 0x171717,
