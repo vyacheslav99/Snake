@@ -6,13 +6,13 @@ from PyQt5.QtGui import QPainter, QColor, QIcon
 from . import engine
 
 
-class Tetris(QMainWindow):
+class Snake(QMainWindow):
 
-    def __init__(self, app):
+    def __init__(self, app, speed=None, length=None, arrange_mech=None):
         super().__init__()
 
         self.app = app
-        self.box = GameBox(self)
+        self.box = GameBox(self, speed=speed, length=length, arrange_mech=arrange_mech)
         self.setCentralWidget(self.box)
         self.setWindowIcon(QIcon('app.ico'))
         self.setWindowTitle('Удавчик')
@@ -41,13 +41,19 @@ class GameBox(QFrame):
     BoxWidth = 20
     BoxHeight = 20
 
-    def __init__(self, parent):
+    def __init__(self, parent, speed=None, length=None, arrange_mech=None):
         super().__init__(parent)
 
-        self.speed = self.InitialSpeed
+        self._initial_speed = speed or self.InitialSpeed
+
+        if self._initial_speed <= 0:
+            raise Exception(f'Задана неверная начальная скорость: {self._initial_speed}! '
+                            'Скорость игры не может быть меньше 1!')
+
+        self.speed = 0
         self.isStarted = False
         self.isPaused = False
-        self.engine = engine.Engine(GameBox.BoxWidth, GameBox.BoxHeight)
+        self.engine = engine.Engine(GameBox.BoxWidth, GameBox.BoxHeight, boa_size=length, arrange_mech=arrange_mech)
         self.timer = QBasicTimer()
         self.acc_timer = QBasicTimer()
         self.setFocusPolicy(Qt.StrongFocus)
@@ -60,7 +66,7 @@ class GameBox(QFrame):
         self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
         self.isPaused = False
         self.isStarted = True
-        self.speed = self.InitialSpeed
+        self.speed = self._initial_speed
         self.engine.start()
         self.timer.start(self.speed, self)
         self.acc_timer.start(self.AccInterval, self)

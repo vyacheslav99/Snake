@@ -17,14 +17,19 @@ FIELD_GROUP_BOA = 'boa'
 FIELD_GROUP_EATS = 'eats'
 FIELD_GROUP_BARRIER = 'barrier'
 
-AreaTypes = {
+AREA_TYPES = {
     FIELD_GROUP_EMPTY: (FIELD_TYPE_NONE,),
     FIELD_GROUP_BOA: (FIELD_TYPE_HEAD, FIELD_TYPE_BODY),
     FIELD_GROUP_EATS: (FIELD_TYPE_EATS1, FIELD_TYPE_EATS2, FIELD_TYPE_EATS3, FIELD_TYPE_EATS4, FIELD_TYPE_EATS5),
     FIELD_GROUP_BARRIER: (FIELD_TYPE_HOLE, FIELD_TYPE_ROCK)
 }
 
-DEATH_TYPES = AreaTypes[FIELD_GROUP_BOA] + AreaTypes[FIELD_GROUP_BARRIER]
+DEATH_TYPES = AREA_TYPES[FIELD_GROUP_BOA] + AREA_TYPES[FIELD_GROUP_BARRIER]
+
+ARRANGE_TOWARDS = 0
+ARRANGE_SNAKE = 1
+ARRANGE_HELIX = 2
+ARRANGE_TYPES = (ARRANGE_TOWARDS, ARRANGE_SNAKE, ARRANGE_HELIX)
 
 
 class StopGameException(Exception):
@@ -35,10 +40,23 @@ class Engine(object):
 
     EATS_RAISE_INTERVAL = 15
 
-    def __init__(self, box_width, box_height):
+    def __init__(self, box_width, box_height, boa_size=None, arrange_mech=None):
         self._width = box_width
         self._height = box_height
         self._locked = False
+        self._initial_boa_size = boa_size or 2
+        self._arrange_mech = arrange_mech or ARRANGE_TOWARDS
+
+        if self._initial_boa_size >= self._height * self._width:
+            raise Exception(f'Задан стартовый размер удавчика ({self._initial_boa_size}), '
+                            f'равный или превышающий количество клеток поля ({self._height * self._width})!')
+
+        if self._initial_boa_size < 1:
+            raise Exception(f'Задан слишком маленький стартовый размер удавчика: {self._initial_boa_size}!')
+
+        if self._arrange_mech not in ARRANGE_TYPES:
+            raise Exception(f'Задан неверный тип расположения удавчика на поле: {self._arrange_mech}! '
+                            'Возможные значения: 0 - 2')
 
         # кол-во шагов до появления еды
         self._to_rise = 0
@@ -60,11 +78,17 @@ class Engine(object):
     def start(self):
         if not self._boa:
             self._to_rise = self.EATS_RAISE_INTERVAL
-            self._boa = [[1, self._width // 2], [0, self._width // 2]]
-            self._boa_moves = [[1, 0], [1, 0]]
-            self._area[self._boa[0][0]][self._boa[0][1]] = FIELD_TYPE_HEAD
-            self._area[self._boa[1][0]][self._boa[1][1]] = FIELD_TYPE_BODY
-            self._create_barriers()
+
+            if self._arrange_mech == ARRANGE_HELIX:
+                self._arrange_helix()
+            elif self._arrange_mech == ARRANGE_SNAKE:
+                self._arrange_snake()
+            else:
+                self._arrange_towards()
+
+            if len(self._boa) < (self._width + self._height) * 2:
+                self._create_barriers()
+
             self._add_eat()
 
     def clear(self):
@@ -106,13 +130,204 @@ class Engine(object):
         except Exception:
             return 0
 
+    def _reflect_boa_on_area(self):
+        for i, coord in enumerate(self._boa):
+            self._area[coord[0]][coord[1]] = FIELD_TYPE_HEAD if i == 0 else FIELD_TYPE_BODY
+
+    def _toward_reverse(self, center_top, center_left):
+        direct = 1  # 0 - слева-направо, 1 - снизу-вверх, 2 - справа-налево, 3 - сверху-вниз
+        min_top = center_top - 1
+        min_left = center_left - 2
+        max_top = center_top + 2
+        max_left = center_left + 1
+        top, left = center_top, center_left + 1
+        of_top, of_left = -1, 0
+
+        while len(self._boa) < self._initial_boa_size:
+            self._boa.append([top, left])
+            self._boa_moves.append([of_top, of_left])
+
+            if direct == 0:
+                # слева-направо
+                left += 1
+                of_top, of_left = 0, 1
+
+                if left >= max_left:
+                    direct = 1
+                    max_left += 2
+                    self._direct_points[(top, left)] = [-1, 0]
+            elif direct == 1:
+                # снизу-вверх
+                top -= 1
+                of_top, of_left = -1, 0
+
+                if top <= min_top:
+                    direct = 2
+                    min_top -= 2
+                    self._direct_points[(top, left)] = [0, -1]
+            elif direct == 2:
+                # справа-налево
+                left -= 1
+                of_top, of_left = 0, -1
+
+                if left <= min_left:
+                    direct = 3
+                    min_left -= 2
+                    self._direct_points[(top, left)] = [1, 0]
+            elif direct == 3:
+                # сверху-вниз
+                top += 1
+                of_top, of_left = 1, 0
+
+                if top >= max_top:
+                    direct = 0
+                    max_top += 2
+                    self._direct_points[(top, left)] = [0, 1]
+
+    def _arrange_towards(self):
+        direct = 0  # 0 - слева-направо, 1 - сверху-вниз, 2 - справа-налево, 3 - снизу-вверх
+        min_top, min_left = 2, 0
+        max_top = self._height - 1
+        max_left = self._width - 1
+        top, left = 0, 0
+        of_top, of_left = 0, 1
+
+        while len(self._boa) < self._initial_boa_size:
+            self._boa.append([top, left])
+            self._boa_moves.append([of_top, of_left])
+
+            if top == self._height // 2 and left == self._width // 2 - 1:
+                # мы попали в центр, надо разворачиваться и двигать в обратном направлении
+                self._toward_reverse(top, left)
+                break
+
+            if direct == 0:
+                # слева-направо
+                left += 1
+                of_top, of_left = 0, 1
+
+                if left >= max_left:
+                    direct = 1
+                    max_left -= 2
+                    self._direct_points[(top, left)] = [1, 0]
+            elif direct == 1:
+                # сверху-вниз
+                top += 1
+                of_top, of_left = 1, 0
+
+                if top >= max_top:
+                    direct = 2
+                    max_top -= 2
+                    self._direct_points[(top, left)] = [0, -1]
+            elif direct == 2:
+                # справа-налево
+                left -= 1
+                of_top, of_left = 0, -1
+
+                if left <= min_left:
+                    direct = 3
+                    min_left += 2
+                    self._direct_points[(top, left)] = [-1, 0]
+            elif direct == 3:
+                # снизу-вверх
+                top -= 1
+                of_top, of_left = -1, 0
+
+                if top <= min_top:
+                    direct = 0
+                    min_top += 2
+                    self._direct_points[(top, left)] = [0, 1]
+
+        self._boa.reverse()
+        self._boa_moves.reverse()
+        self._reflect_boa_on_area()
+
+    def _arrange_snake(self):
+        direct = 1  # 1 - слева-направо, -1 - справа-налево
+        top, left = 0, 0
+        f = False
+
+        while len(self._boa) < self._initial_boa_size:
+            self._boa.append([top, left])
+            self._boa_moves.append([0, direct])
+            left += direct
+
+            if left == 0 or left == self._width - 1:
+                direct *= -1
+                self._boa.append([top, left])
+                self._boa_moves.append([1, 0])
+                self._direct_points[(top, left)] = [1, 0]
+                top += 1
+                self._direct_points[(top, left)] = [0, direct]
+
+        self._boa.reverse()
+        self._boa_moves.reverse()
+        self._reflect_boa_on_area()
+
+    def _arrange_helix(self):
+        direct = 0  # 0 - слева-направо, 1 - сверху-вниз, 2 - справа-налево, 3 - снизу-вверх
+        min_top, min_left = 1, 0
+        max_top = self._height - 1
+        max_left = self._width - 1
+        top, left = 0, 0
+        of_top, of_left = 0, 1
+
+        while len(self._boa) < self._initial_boa_size:
+            self._boa.append([top, left])
+            self._boa_moves.append([of_top, of_left])
+
+            if direct == 0:
+                # слева-направо
+                left += 1
+                of_top, of_left = 0, 1
+
+                if left == max_left:
+                    direct = 1
+                    max_left -= 1
+                    self._direct_points[(top, left)] = [1, 0]
+            elif direct == 1:
+                # сверху-вниз
+                top += 1
+                of_top, of_left = 1, 0
+
+                if top == max_top:
+                    direct = 2
+                    max_top -= 1
+                    self._direct_points[(top, left)] = [0, -1]
+            elif direct == 2:
+                # справа-налево
+                left -= 1
+                of_top, of_left = 0, -1
+
+                if left == min_left:
+                    direct = 3
+                    min_left += 1
+                    self._direct_points[(top, left)] = [-1, 0]
+            elif direct == 3:
+                # снизу-вверх
+                top -= 1
+                of_top, of_left = -1, 0
+
+                if top == min_top:
+                    direct = 0
+                    min_top += 1
+                    self._direct_points[(top, left)] = [0, 1]
+
+        self._boa.reverse()
+        self._boa_moves.reverse()
+        self._reflect_boa_on_area()
+
     def _create_barriers(self):
         """ накидывает на поле несколько случайных препятствий """
         for _ in range(random.randint(0, self._width * self._height / 100)):
             top, left = self._rand_coord(FIELD_GROUP_BARRIER)
+
+            if top is None or left is None:
+                return
+
             of_top = random.choice((-1, 0, 1))
             of_left = random.choice((-1, 0, 1))
-            el_type = random.choice(AreaTypes[FIELD_GROUP_BARRIER])
+            el_type = random.choice(AREA_TYPES[FIELD_GROUP_BARRIER])
 
             for i in range(random.randint(1, 6)):
                 if i == 0:
@@ -124,7 +339,11 @@ class Engine(object):
 
     def _add_eat(self):
         top, left = self._rand_coord(FIELD_GROUP_EATS)
-        self._area[top][left] = random.choice(AreaTypes[FIELD_GROUP_EATS])
+
+        if top is None or left is None:
+            return
+
+        self._area[top][left] = random.choice(AREA_TYPES[FIELD_GROUP_EATS])
 
     def _check_pos(self, top, left):
         """ Проверяет, свободны ли на доске точки с заданными координатами """
@@ -133,10 +352,10 @@ class Engine(object):
 
         return True
 
-    def _check_pos_raise(self, top, left):
+    def _check_pos_raise(self, top, left, barriers_only=False):
         if top < 0 or top >= self._height or left < 0 or left >= self._width:
             raise StopGameException('Удавчик убился об стену!')
-        if self._area[top][left] == FIELD_TYPE_BODY:
+        if not barriers_only and self._area[top][left] == FIELD_TYPE_BODY:
             if self._boa[1] == [top, left]:
                 raise StopGameException('Удавчик свернулся внутрь себя!')
             else:
@@ -156,7 +375,10 @@ class Engine(object):
 
     def _rand_coord(self, cell_type_group):
         coords = tuple((t, l) for t in range(self._width) for l in range(self._height)
-                  if self._check_pos(t, l) and self._area[t][l] not in AreaTypes[cell_type_group])
+                       if self._check_pos(t, l) and self._area[t][l] not in AREA_TYPES[cell_type_group])
+
+        if not coords:
+            return None, None
 
         res = random.choice(coords)
         return res[0], res[1]
@@ -164,7 +386,7 @@ class Engine(object):
     def _check_to_win(self):
         for top in range(self._width):
             for left in range(self._height):
-                if self._area[top][left] in AreaTypes[FIELD_GROUP_EMPTY] + AreaTypes[FIELD_GROUP_EATS]:
+                if self._area[top][left] in AREA_TYPES[FIELD_GROUP_EMPTY] + AREA_TYPES[FIELD_GROUP_EATS]:
                     return False
 
         return True
@@ -175,9 +397,12 @@ class Engine(object):
             while self._locked:
                 pass
 
+            # проверить, вдруг победил
+            if self._check_to_win():
+                raise StopGameException('Ура! Победа!')
+
             self._locked = True
             last = copy.copy(self._boa[len(self._boa)-1])
-            prolong = False
 
             # пробуем переместиться
             for i in range(len(self._boa)):
@@ -193,25 +418,17 @@ class Engine(object):
                     self._boa[i][j] += self._boa_moves[i][j]
 
                 if i == 0:
-                    # можно ли занять новую позицию
-                    self._check_pos_raise(*self._boa[i])
+                    self._check_pos_raise(*self._boa[i], barriers_only=True)
 
-                    # если в новом месте жратва - надо будет удлинить хвост
-                    if self._area[self._boa[i][0]][self._boa[i][1]] in AreaTypes[FIELD_GROUP_EATS]:
-                        prolong = True
-
-            if prolong:
+            # если в новом месте жратва - надо удлинить хвост
+            if self._area[self._boa[0][0]][self._boa[0][1]] in AREA_TYPES[FIELD_GROUP_EATS]:
                 self._boa.append(last)
                 self._boa_moves.append(copy.copy(self._boa_moves[len(self._boa_moves)-1]))
             else:
                 self._area[last[0]][last[1]] = FIELD_TYPE_NONE
 
-            for i, coord in enumerate(self._boa):
-                self._area[coord[0]][coord[1]] = FIELD_TYPE_HEAD if i == 0 else FIELD_TYPE_BODY
-
-            # проверить, вдруг победил
-            if self._check_to_win():
-                raise StopGameException('Удавчик заполнил все! Победа!')
+            self._reflect_boa_on_area()
+            self._check_pos_raise(*self._boa[0])
 
             # появление еды через каждые n шагов
             self._to_rise -= 1
