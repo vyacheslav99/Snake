@@ -136,14 +136,13 @@ class Engine(object):
 
     def _toward_reverse(self, center_top, center_left):
         direct = 1  # 0 - слева-направо, 1 - снизу-вверх, 2 - справа-налево, 3 - сверху-вниз
-        min_top = center_top - 1
-        min_left = center_left - 2
-        max_top = center_top + 2
-        max_left = center_left + 1
+        part_len = 2
         top, left = center_top, center_left + 1
         of_top, of_left = -1, 0
+        n = 0
 
         while len(self._boa) < self._initial_boa_size:
+            n += 1
             self._boa.append([top, left])
             self._boa_moves.append([of_top, of_left])
 
@@ -152,36 +151,38 @@ class Engine(object):
                 left += 1
                 of_top, of_left = 0, 1
 
-                if left >= max_left:
+                if n == part_len:
+                    n = 0
                     direct = 1
-                    max_left += 2
                     self._direct_points[(top, left)] = [-1, 0]
             elif direct == 1:
                 # снизу-вверх
                 top -= 1
                 of_top, of_left = -1, 0
 
-                if top <= min_top:
+                if n == part_len:
+                    n = 0
+                    part_len += 2
                     direct = 2
-                    min_top -= 2
                     self._direct_points[(top, left)] = [0, -1]
             elif direct == 2:
                 # справа-налево
                 left -= 1
                 of_top, of_left = 0, -1
 
-                if left <= min_left:
+                if n == part_len:
+                    n = 0
                     direct = 3
-                    min_left -= 2
                     self._direct_points[(top, left)] = [1, 0]
             elif direct == 3:
                 # сверху-вниз
                 top += 1
                 of_top, of_left = 1, 0
 
-                if top >= max_top:
+                if n == part_len:
+                    n = 0
+                    part_len += 2
                     direct = 0
-                    max_top += 2
                     self._direct_points[(top, left)] = [0, 1]
 
     def _arrange_towards(self):
