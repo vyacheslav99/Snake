@@ -136,7 +136,7 @@ class Engine(object):
 
     def _toward_reverse(self, center_top, center_left):
         direct = 1  # 0 - слева-направо, 1 - снизу-вверх, 2 - справа-налево, 3 - сверху-вниз
-        part_len = 2
+        part_len = 1
         top, left = center_top, center_left + 1
         of_top, of_left = -1, 0
         n = 0
