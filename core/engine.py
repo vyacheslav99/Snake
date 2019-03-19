@@ -140,11 +140,16 @@ class Engine(object):
         top, left = center_top, center_left + 1
         of_top, of_left = -1, 0
         n = 0
+        dp = [-1, 0]
 
         while len(self._boa) < self._initial_boa_size:
             n += 1
             self._boa.append([top, left])
             self._boa_moves.append([of_top, of_left])
+
+            if dp:
+                self._direct_points[(top, left)] = dp
+                dp = None
 
             if direct == 0:
                 # слева-направо
@@ -154,7 +159,7 @@ class Engine(object):
                 if n == part_len:
                     n = 0
                     direct = 1
-                    self._direct_points[(top, left)] = [-1, 0]
+                    dp = [-1, 0]
             elif direct == 1:
                 # снизу-вверх
                 top -= 1
@@ -164,7 +169,7 @@ class Engine(object):
                     n = 0
                     part_len += 2
                     direct = 2
-                    self._direct_points[(top, left)] = [0, -1]
+                    dp = [0, -1]
             elif direct == 2:
                 # справа-налево
                 left -= 1
@@ -173,7 +178,7 @@ class Engine(object):
                 if n == part_len:
                     n = 0
                     direct = 3
-                    self._direct_points[(top, left)] = [1, 0]
+                    dp = [1, 0]
             elif direct == 3:
                 # сверху-вниз
                 top += 1
@@ -183,7 +188,7 @@ class Engine(object):
                     n = 0
                     part_len += 2
                     direct = 0
-                    self._direct_points[(top, left)] = [0, 1]
+                    dp = [0, 1]
 
     def _arrange_towards(self):
         direct = 0  # 0 - слева-направо, 1 - сверху-вниз, 2 - справа-налево, 3 - снизу-вверх
@@ -192,10 +197,15 @@ class Engine(object):
         max_left = self._width - 1
         top, left = 0, 0
         of_top, of_left = 0, 1
+        dp = None
 
         while len(self._boa) < self._initial_boa_size:
             self._boa.append([top, left])
             self._boa_moves.append([of_top, of_left])
+
+            if dp:
+                self._direct_points[(top, left)] = dp
+                dp = None
 
             if top == self._height // 2 and left == self._width // 2 - 1:
                 # мы попали в центр, надо разворачиваться и двигать в обратном направлении
@@ -210,7 +220,7 @@ class Engine(object):
                 if left >= max_left:
                     direct = 1
                     max_left -= 2
-                    self._direct_points[(top, left)] = [1, 0]
+                    dp = [1, 0]
             elif direct == 1:
                 # сверху-вниз
                 top += 1
@@ -219,7 +229,7 @@ class Engine(object):
                 if top >= max_top:
                     direct = 2
                     max_top -= 2
-                    self._direct_points[(top, left)] = [0, -1]
+                    dp = [0, -1]
             elif direct == 2:
                 # справа-налево
                 left -= 1
@@ -228,7 +238,7 @@ class Engine(object):
                 if left <= min_left:
                     direct = 3
                     min_left += 2
-                    self._direct_points[(top, left)] = [-1, 0]
+                    dp = [-1, 0]
             elif direct == 3:
                 # снизу-вверх
                 top -= 1
@@ -237,7 +247,7 @@ class Engine(object):
                 if top <= min_top:
                     direct = 0
                     min_top += 2
-                    self._direct_points[(top, left)] = [0, 1]
+                    dp = [0, 1]
 
         self._boa.reverse()
         self._boa_moves.reverse()
