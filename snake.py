@@ -15,10 +15,11 @@ def main():
     ap.add_argument('-a', '--arrange_mech', type=int,
                     help='Способ расположения нового удава на поле при старте игры: '
                          '0 - спираль (улитка), 1 - зигзаг. По умолчанию 0')
+    ap.add_argument('-f', '--freeze', action='store_true', help='Не наращивать скорость')
     args = ap.parse_args()
 
     app = QApplication(sys.argv)
-    snake = game.Snake(app, speed=args.speed, length=args.length, arrange_mech=args.arrange_mech)
+    snake = game.Snake(app, speed=args.speed, length=args.length, arrange_mech=args.arrange_mech, freeze=args.freeze)
     sys.exit(app.exec_())
 
 

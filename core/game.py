@@ -8,11 +8,11 @@ from . import engine
 
 class Snake(QMainWindow):
 
-    def __init__(self, app, speed=None, length=None, arrange_mech=None):
+    def __init__(self, app, speed=None, length=None, arrange_mech=None, freeze=False):
         super().__init__()
 
         self.app = app
-        self.box = GameBox(self, speed=speed, length=length, arrange_mech=arrange_mech)
+        self.box = GameBox(self, speed=speed, length=length, arrange_mech=arrange_mech, freeze=freeze)
         self.setCentralWidget(self.box)
         self.setWindowIcon(QIcon('app.ico'))
         self.setWindowTitle('Удавчик')
@@ -41,7 +41,7 @@ class GameBox(QFrame):
     BoxWidth = 20
     BoxHeight = 20
 
-    def __init__(self, parent, speed=None, length=None, arrange_mech=None):
+    def __init__(self, parent, speed=None, length=None, arrange_mech=None, freeze=False):
         super().__init__(parent)
 
         self._initial_speed = speed or self.InitialSpeed
@@ -50,6 +50,7 @@ class GameBox(QFrame):
             raise Exception(f'Задана неверная начальная скорость: {self._initial_speed}! '
                             'Скорость игры не может быть меньше 1!')
 
+        self.freeze_speed = freeze
         self.speed = 0
         self.isStarted = False
         self.isPaused = False
@@ -146,7 +147,7 @@ class GameBox(QFrame):
         try:
             if event.timerId() == self.timer.timerId():
                 self.engine.move()
-            elif event.timerId() == self.acc_timer.timerId():
+            elif event.timerId() == self.acc_timer.timerId() and not self.freeze_speed:
                 self.speed *= self.Accelerator
                 if not self.isPaused:
                     self.timer.stop()
