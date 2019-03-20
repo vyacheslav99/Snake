@@ -26,10 +26,10 @@ AREA_TYPES = {
 
 DEATH_TYPES = AREA_TYPES[FIELD_GROUP_BOA] + AREA_TYPES[FIELD_GROUP_BARRIER]
 
-ARRANGE_TOWARDS = 0
-ARRANGE_SNAKE = 1
-ARRANGE_HELIX = 2
-ARRANGE_TYPES = (ARRANGE_TOWARDS, ARRANGE_SNAKE, ARRANGE_HELIX)
+ARRANGE_HELIX = 0
+ARRANGE_ZIGZAG = 1
+ARRANGE_UNDEFINED = 2
+ARRANGE_TYPES = (ARRANGE_HELIX, ARRANGE_ZIGZAG, ARRANGE_UNDEFINED)
 
 
 class StopGameException(Exception):
@@ -45,7 +45,7 @@ class Engine(object):
         self._height = box_height
         self._locked = False
         self._initial_boa_size = boa_size or 2
-        self._arrange_mech = arrange_mech or ARRANGE_TOWARDS
+        self._arrange_mech = arrange_mech or ARRANGE_HELIX
 
         if self._initial_boa_size >= self._height * self._width:
             raise Exception(f'Задан стартовый размер удавчика ({self._initial_boa_size}), '
@@ -79,12 +79,14 @@ class Engine(object):
         if not self._boa:
             self._to_rise = self.EATS_RAISE_INTERVAL
 
-            if self._arrange_mech == ARRANGE_HELIX:
-                self._arrange_helix()
-            elif self._arrange_mech == ARRANGE_SNAKE:
-                self._arrange_snake()
+            if self._arrange_mech == ARRANGE_UNDEFINED:
+                self._arrange_wtf()
+            elif self._arrange_mech == ARRANGE_ZIGZAG:
+                self._arrange_zigzag()
+            # elif self._arrange_mech == ARRANGE_HELIX:
+            #     self._arrange_helix()
             else:
-                self._arrange_towards()
+                self._arrange_helix()
 
             if len(self._boa) < (self._width + self._height) * 2:
                 self._create_barriers()
@@ -134,7 +136,7 @@ class Engine(object):
         for i, coord in enumerate(self._boa):
             self._area[coord[0]][coord[1]] = FIELD_TYPE_HEAD if i == 0 else FIELD_TYPE_BODY
 
-    def _toward_reverse(self, center_top, center_left):
+    def _helix_back(self, center_top, center_left):
         direct = 1  # 0 - слева-направо, 1 - снизу-вверх, 2 - справа-налево, 3 - сверху-вниз
         part_len = 1
         top, left = center_top, center_left + 1
@@ -190,7 +192,7 @@ class Engine(object):
                     direct = 0
                     dp = [0, 1]
 
-    def _arrange_towards(self):
+    def _arrange_helix(self):
         direct = 0  # 0 - слева-направо, 1 - сверху-вниз, 2 - справа-налево, 3 - снизу-вверх
         min_top, min_left = 2, 0
         max_top = self._height - 1
@@ -203,14 +205,14 @@ class Engine(object):
             self._boa.append([top, left])
             self._boa_moves.append([of_top, of_left])
 
+            if top == self._height // 2 and left == self._width // 2 - 1:
+                # мы попали в центр, надо разворачиваться и двигать в обратном направлении
+                self._helix_back(top, left)
+                break
+
             if dp:
                 self._direct_points[(top, left)] = dp
                 dp = None
-
-            if top == self._height // 2 and left == self._width // 2 - 1:
-                # мы попали в центр, надо разворачиваться и двигать в обратном направлении
-                self._toward_reverse(top, left)
-                break
 
             if direct == 0:
                 # слева-направо
@@ -253,9 +255,23 @@ class Engine(object):
         self._boa_moves.reverse()
         self._reflect_boa_on_area()
 
-    def _arrange_snake(self):
+    def _zigzag_back(self, head_top, head_left):
+        left = head_left - 1
+        top = head_top
+
+        self._boa.append([top, left])
+        self._boa_moves.append([0, -1])
+        self._direct_points[(top, left)] = [-1, 0]
+
+        while len(self._boa) < self._initial_boa_size:
+            top -= 1
+            self._boa.append([top, left])
+            self._boa_moves.append([-1, 0])
+
+    def _arrange_zigzag(self):
         direct = 1  # 1 - слева-направо, -1 - справа-налево
         top, left = 0, 0
+        min_left = 0
         f = False
 
         while len(self._boa) < self._initial_boa_size:
@@ -263,19 +279,26 @@ class Engine(object):
             self._boa_moves.append([0, direct])
             left += direct
 
-            if left == 0 or left == self._width - 1:
+            if left == min_left or left == self._width - 1:
+                min_left = 1
                 direct *= -1
                 self._boa.append([top, left])
-                self._boa_moves.append([1, 0])
-                self._direct_points[(top, left)] = [1, 0]
-                top += 1
-                self._direct_points[(top, left)] = [0, direct]
+
+                if top == self._height - 1:
+                    self._boa_moves.append([0, -1])
+                    self._zigzag_back(top, left)
+                    break
+                else:
+                    self._boa_moves.append([1, 0])
+                    self._direct_points[(top, left)] = [1, 0]
+                    top += 1
+                    self._direct_points[(top, left)] = [0, direct]
 
         self._boa.reverse()
         self._boa_moves.reverse()
         self._reflect_boa_on_area()
 
-    def _arrange_helix(self):
+    def _arrange_wtf(self):
         direct = 0  # 0 - слева-направо, 1 - сверху-вниз, 2 - справа-налево, 3 - снизу-вверх
         min_top, min_left = 1, 0
         max_top = self._height - 1
