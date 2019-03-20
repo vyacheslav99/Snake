@@ -28,8 +28,7 @@ DEATH_TYPES = AREA_TYPES[FIELD_GROUP_BOA] + AREA_TYPES[FIELD_GROUP_BARRIER]
 
 ARRANGE_HELIX = 0
 ARRANGE_ZIGZAG = 1
-ARRANGE_UNDEFINED = 2
-ARRANGE_TYPES = (ARRANGE_HELIX, ARRANGE_ZIGZAG, ARRANGE_UNDEFINED)
+ARRANGE_TYPES = (ARRANGE_HELIX, ARRANGE_ZIGZAG)
 
 
 class StopGameException(Exception):
@@ -79,9 +78,7 @@ class Engine(object):
         if not self._boa:
             self._to_rise = self.EATS_RAISE_INTERVAL
 
-            if self._arrange_mech == ARRANGE_UNDEFINED:
-                self._arrange_wtf()
-            elif self._arrange_mech == ARRANGE_ZIGZAG:
+            if self._arrange_mech == ARRANGE_ZIGZAG:
                 self._arrange_zigzag()
             # elif self._arrange_mech == ARRANGE_HELIX:
             #     self._arrange_helix()
@@ -293,59 +290,6 @@ class Engine(object):
                     self._direct_points[(top, left)] = [1, 0]
                     top += 1
                     self._direct_points[(top, left)] = [0, direct]
-
-        self._boa.reverse()
-        self._boa_moves.reverse()
-        self._reflect_boa_on_area()
-
-    def _arrange_wtf(self):
-        direct = 0  # 0 - слева-направо, 1 - сверху-вниз, 2 - справа-налево, 3 - снизу-вверх
-        min_top, min_left = 1, 0
-        max_top = self._height - 1
-        max_left = self._width - 1
-        top, left = 0, 0
-        of_top, of_left = 0, 1
-
-        while len(self._boa) < self._initial_boa_size:
-            self._boa.append([top, left])
-            self._boa_moves.append([of_top, of_left])
-
-            if direct == 0:
-                # слева-направо
-                left += 1
-                of_top, of_left = 0, 1
-
-                if left == max_left:
-                    direct = 1
-                    max_left -= 1
-                    self._direct_points[(top, left)] = [1, 0]
-            elif direct == 1:
-                # сверху-вниз
-                top += 1
-                of_top, of_left = 1, 0
-
-                if top == max_top:
-                    direct = 2
-                    max_top -= 1
-                    self._direct_points[(top, left)] = [0, -1]
-            elif direct == 2:
-                # справа-налево
-                left -= 1
-                of_top, of_left = 0, -1
-
-                if left == min_left:
-                    direct = 3
-                    min_left += 1
-                    self._direct_points[(top, left)] = [-1, 0]
-            elif direct == 3:
-                # снизу-вверх
-                top -= 1
-                of_top, of_left = -1, 0
-
-                if top == min_top:
-                    direct = 0
-                    min_top += 1
-                    self._direct_points[(top, left)] = [0, 1]
 
         self._boa.reverse()
         self._boa_moves.reverse()
