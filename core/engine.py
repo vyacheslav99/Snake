@@ -85,9 +85,9 @@ class Engine(object):
             else:
                 self._arrange_helix()
 
-            # решил отказаться от препятствий, т.к. под конец они делают прохождение невозможным
+            # на старте препятствия накидывать не будем, т.к. под конец они делают прохождение невозможным
             # if len(self._boa) < (self._width + self._height) * 2:
-            #     self._create_barriers()
+            #     self.create_barriers()
 
             self._add_eat()
 
@@ -98,9 +98,6 @@ class Engine(object):
         self._boa_moves = []
         self._direct_points = {}
         self._area = [[FIELD_TYPE_NONE for col in range(self._width)] for row in range(self._height)]
-
-    def cell(self, top, left):
-        return self._area[top][left]
 
     def length(self):
         return len(self._boa)
@@ -125,11 +122,66 @@ class Engine(object):
         """ повернуть вниз """
         self._change_direction(1, 0)
 
+    def create_barriers(self):
+        """ накидывает на поле несколько случайных препятствий """
+
+        while self._locked:
+            pass
+
+        try:
+            self._locked = True
+            for _ in range(random.randint(0, self._width * self._height / 100)):
+                top, left = self._rand_coord(FIELD_GROUP_BARRIER)
+
+                if top is None or left is None:
+                    return
+
+                of_top = random.choice((-1, 0, 1))
+                of_left = random.choice((-1, 0, 1))
+                el_type = random.choice(AREA_TYPES[FIELD_GROUP_BARRIER])
+
+                for i in range(random.randint(1, 6)):
+                    if i == 0:
+                        self._area[top][left] = el_type
+                    else:
+                        t, l = top + of_top * i, left + of_left * i
+                        if self._check_pos(t, l):
+                            self._area[t][l] = el_type
+        finally:
+            self._locked = False
+
+    def remove_barriers(self):
+        """ убирает с поля все препятствия """
+
+        while self._locked:
+            pass
+
+        try:
+            self._locked = True
+            for i in range(len(self._area)):
+                for j in range(len(self._area[i])):
+                    if self._area[i][j] in AREA_TYPES[FIELD_GROUP_BARRIER]:
+                        self._area[i][j] = FIELD_TYPE_NONE
+        finally:
+            self._locked = False
+
+    def cell(self, top, left):
+        return self._area[top][left]
+
     def body_index(self, top, left):
         try:
             return self._boa.index([top, left]) - 1
         except Exception:
             return 0
+
+    def print_debug_info(self):
+        print('-= Core parameters =-')
+        print(f'Dimensions:  Height: {self._height} Width: {self._width} Area: {self._width * self._height}')
+        print(f'Start boa size: {self._initial_boa_size}')
+        print(f'Current boa size: {len(self._boa)}')
+        print(f'Arrange method: {self._arrange_mech}')
+        print(f'Head position:  Top: {self._boa[0][0]} Left: {self._boa[0][1]}')
+        print(f'Head direction:  Top: {self._boa_moves[0][0]} Left: {self._boa_moves[0][1]}')
 
     def _reflect_boa_on_area(self):
         for i, coord in enumerate(self._boa):
@@ -296,26 +348,6 @@ class Engine(object):
         self._boa.reverse()
         self._boa_moves.reverse()
         self._reflect_boa_on_area()
-
-    def _create_barriers(self):
-        """ накидывает на поле несколько случайных препятствий """
-        for _ in range(random.randint(0, self._width * self._height / 100)):
-            top, left = self._rand_coord(FIELD_GROUP_BARRIER)
-
-            if top is None or left is None:
-                return
-
-            of_top = random.choice((-1, 0, 1))
-            of_left = random.choice((-1, 0, 1))
-            el_type = random.choice(AREA_TYPES[FIELD_GROUP_BARRIER])
-
-            for i in range(random.randint(1, 6)):
-                if i == 0:
-                    self._area[top][left] = el_type
-                else:
-                    t, l = top + of_top * i, left + of_left * i
-                    if self._check_pos(t, l):
-                        self._area[t][l] = el_type
 
     def _add_eat(self):
         top, left = self._rand_coord(FIELD_GROUP_EATS)

@@ -2,6 +2,7 @@ import os, sys
 import random
 import json
 import pickle
+import datetime
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QFrame, QMessageBox
 from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
 from PyQt5.QtGui import QPainter, QColor, QIcon
@@ -57,6 +58,7 @@ class GameBox(QFrame):
             raise Exception(f'Задана неверная начальная скорость: {self._initial_speed}! '
                             'Скорость игры не может быть меньше 1!')
 
+        self.start_time = None
         self.save_file = 'autosave.dat'
         self.freeze_speed = freeze
         self.speed = 0
@@ -128,6 +130,7 @@ class GameBox(QFrame):
         self.engine.start()
         self.timer.start(self.speed, self)
         self.acc_timer.start(self.AccInterval, self)
+        self.start_time = datetime.datetime.now()
         self.update()
 
         if after_load:
@@ -162,6 +165,31 @@ class GameBox(QFrame):
             self.timer.start(self.speed, self)
             self.acc_timer.start(self.AccInterval, self)
 
+    def print_debug_info(self):
+        self.engine.print_debug_info()
+
+        print('')
+        print('-= Game parameters =-')
+        print(f'Started: {self.isStarted}')
+        print(f'Paused: {self.isPaused}')
+
+        if self.isStarted:
+            print(f'Game time: {datetime.datetime.now() - self.start_time}')
+
+        print(f'Initial speed: {self._initial_speed}')
+        print(f'Current speed: {self.speed}')
+        print(f'Acceleration coefficient: {self.Accelerator}')
+        print(f'Acceleration frozen: {self.freeze_speed}')
+
+        print('')
+        print('-= Window =-')
+        print(f'Top: {self.parent().geometry().top()}')
+        print(f'Left: {self.parent().geometry().left()}')
+        print(f'Height: {self.parent().geometry().height()}')
+        print(f'Width: {self.parent().geometry().width()}')
+        print(f'Area Height: {self.contentsRect().height()}')
+        print(f'Area Width: {self.contentsRect().width()}')
+
     def scale_width(self):
         """ масштабирование - рассчитывает размер стороны квадрата в пикселях по оси X (ширина) """
         return self.contentsRect().width() // self.BoxWidth
@@ -181,6 +209,9 @@ class GameBox(QFrame):
             if key == Qt.Key_S:
                 self.start()
 
+            elif key == Qt.Key_I:
+                self.print_debug_info()
+
             elif key in (Qt.Key_P, Qt.Key_Space):
                 self.pause()
 
@@ -198,6 +229,12 @@ class GameBox(QFrame):
 
             elif key == Qt.Key_Down:
                 self.engine.turn_down()
+
+            elif key == Qt.Key_B:
+                self.engine.create_barriers()
+
+            elif key == Qt.Key_C:
+                self.engine.remove_barriers()
 
             else:
                 super(GameBox, self).keyPressEvent(event)
