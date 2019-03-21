@@ -1,9 +1,12 @@
+import os, sys
 import random
-from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QFrame
+import json
+import pickle
+from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QFrame, QMessageBox
 from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
 from PyQt5.QtGui import QPainter, QColor, QIcon
 
-from . import engine
+from . import engine, utils
 
 
 class Snake(QMainWindow):
@@ -24,12 +27,16 @@ class Snake(QMainWindow):
         self.center()
         self.show()
 
-        self.box.start()
+        self.box.start(self.box.load())
 
     def center(self):
         screen = QDesktopWidget().screenGeometry()
         size = self.geometry()
         self.move((screen.width() - size.width()) / 2, (screen.height() - size.height()) / 2)
+
+    def closeEvent(self, event):
+        self.box.save()
+        super(Snake, self).closeEvent(event)
 
 
 class GameBox(QFrame):
@@ -50,6 +57,7 @@ class GameBox(QFrame):
             raise Exception(f'Задана неверная начальная скорость: {self._initial_speed}! '
                             'Скорость игры не может быть меньше 1!')
 
+        self.save_file = 'autosave.dat'
         self.freeze_speed = freeze
         self.speed = 0
         self.isStarted = False
@@ -59,11 +67,60 @@ class GameBox(QFrame):
         self.acc_timer = QBasicTimer()
         self.setFocusPolicy(Qt.StrongFocus)
 
-    def start(self):
+    def save(self):
+        try:
+            fn = os.path.normpath(os.path.join(os.path.split(sys.argv[0])[0], self.save_file))
+
+            if os.path.exists(fn):
+                os.unlink(fn)
+
+            if not self.isStarted:
+                return
+
+            data = bytes(json.dumps({
+                'speed': self.speed,
+                'freeze': self.freeze_speed
+            }), 'utf-8')
+
+            obj = pickle.dumps(self.engine)
+
+            with open(fn, 'wb') as f:
+                f.write(utils.int_to_bytes(len(data)))
+                f.write(data)
+                f.write(obj)
+        except Exception as e:
+            print(f'{e}')
+
+    def load(self):
+        try:
+            fn = os.path.normpath(os.path.join(os.path.split(sys.argv[0])[0], self.save_file))
+
+            if not os.path.exists(fn):
+                return
+
+            with open(fn, 'rb') as f:
+                data_sz = utils.int_from_bytes(f.read(utils.int_size()))
+                data = f.read(data_sz).decode('utf-8')
+                obj = f.read()
+
+            data = json.loads(data)
+            obj = pickle.loads(obj)
+
+            self._initial_speed = data['speed']
+            self.freeze_speed = data['freeze']
+            self.engine = obj
+            return True
+        except Exception as e:
+            print(f'{e}')
+            return False
+
+    def start(self, no_clear=False):
         if self.isStarted:
             self.stop()
 
-        self.engine.clear()
+        if not no_clear:
+            self.engine.clear()
+
         self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
         self.isPaused = False
         self.isStarted = True
@@ -113,7 +170,8 @@ class GameBox(QFrame):
 
         try:
             if key == Qt.Key_Escape:
-                self.parent().app.quit()
+                # self.parent().app.quit()
+                self.parent().close()
 
             if key == Qt.Key_S:
                 self.start()

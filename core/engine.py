@@ -85,8 +85,9 @@ class Engine(object):
             else:
                 self._arrange_helix()
 
-            if len(self._boa) < (self._width + self._height) * 2:
-                self._create_barriers()
+            # решил отказаться от препятствий, т.к. под конец они делают прохождение невозможным
+            # if len(self._boa) < (self._width + self._height) * 2:
+            #     self._create_barriers()
 
             self._add_eat()
 
