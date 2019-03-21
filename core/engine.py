@@ -92,6 +92,7 @@ class Engine(object):
             self._add_eat()
 
     def clear(self):
+        self._initial_boa_size = 2
         self._locked = False
         self._boa = []
         self._boa_moves = []
