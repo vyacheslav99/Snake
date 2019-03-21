@@ -138,6 +138,8 @@ class GameBox(QFrame):
         self.acc_timer.stop()
         self.isStarted = False
         self.isPaused = False
+        self._initial_speed = self.InitialSpeed
+        self.freeze_speed = False
         self.msg2Statusbar.emit(f'{message}   Размер: {self.engine.length()}')
         self.update()
 
