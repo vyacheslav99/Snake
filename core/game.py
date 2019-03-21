@@ -114,11 +114,11 @@ class GameBox(QFrame):
             print(f'{e}')
             return False
 
-    def start(self, no_clear=False):
+    def start(self, after_load=False):
         if self.isStarted:
             self.stop()
 
-        if not no_clear:
+        if not after_load:
             self.engine.clear()
 
         self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
@@ -129,6 +129,9 @@ class GameBox(QFrame):
         self.timer.start(self.speed, self)
         self.acc_timer.start(self.AccInterval, self)
         self.update()
+
+        if after_load:
+            self.pause()
 
     def stop(self, message='Кабздец!'):
         if not self.isStarted:
