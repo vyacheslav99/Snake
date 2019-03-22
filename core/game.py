@@ -179,7 +179,8 @@ class GameBox(QFrame):
         print(f'Paused: {self.isPaused}')
 
         if self.isStarted:
-            print(f'Game time: {datetime.datetime.now() - self.start_time}')
+            print(f'Start time: {self.start_time}')
+            print(f'Total left time: {datetime.datetime.now() - self.start_time}')
 
         print(f'Initial speed: {self._initial_speed}')
         print(f'Current speed: {self.speed}')
