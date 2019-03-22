@@ -3,6 +3,9 @@ import random
 import json
 import pickle
 import datetime
+import copy
+from colour import Color
+
 from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QFrame, QMessageBox
 from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
 from PyQt5.QtGui import QPainter, QColor, QIcon
@@ -49,6 +52,19 @@ class GameBox(QFrame):
     BoxWidth = 20
     BoxHeight = 20
 
+    Colors = {
+        engine.FIELD_TYPE_NONE: '#ece9d8',
+        engine.FIELD_TYPE_EATS1: '#ee7600',
+        engine.FIELD_TYPE_EATS2: '#ffff00',
+        engine.FIELD_TYPE_EATS3: '#cd1076',
+        engine.FIELD_TYPE_EATS4: '#0000cd',
+        engine.FIELD_TYPE_EATS5: '#cd0000',
+        engine.FIELD_TYPE_HEAD: '#008b00',
+        engine.FIELD_TYPE_BODY: ('#7fff00', '#ff1493'),
+        engine.FIELD_TYPE_HOLE: '#171717',
+        engine.FIELD_TYPE_ROCK: '#5e6965'
+    }
+
     def __init__(self, parent, speed=None, length=None, arrange_mech=None, freeze=False):
         super().__init__(parent)
 
@@ -64,9 +80,11 @@ class GameBox(QFrame):
         self.speed = 0
         self.isStarted = False
         self.isPaused = False
+        self._sp_interval = 1
         self.engine = engine.Engine(GameBox.BoxWidth, GameBox.BoxHeight, boa_size=length, arrange_mech=arrange_mech)
         self.timer = QBasicTimer()
         self.acc_timer = QBasicTimer()
+        self.spark_timer = QBasicTimer()
         self.setFocusPolicy(Qt.StrongFocus)
 
     def save(self):
@@ -119,11 +137,17 @@ class GameBox(QFrame):
             return False
 
     def start(self, after_load=False):
+        self.spark_timer.stop()
+
         if self.isStarted:
             self.stop()
 
         if not after_load:
             self.engine.clear()
+
+        self._sp_alg = random.choice((0, 1))
+        self.body_gradient = list(Color(self.Colors[engine.FIELD_TYPE_BODY][0]).range_to(
+            Color(self.Colors[engine.FIELD_TYPE_BODY][1]), (self.BoxWidth * self.BoxHeight) - 1))
 
         self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
         self.isPaused = False
@@ -169,6 +193,31 @@ class GameBox(QFrame):
             self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
             self.timer.start(self.speed, self)
             self.acc_timer.start(self.AccInterval, self)
+
+    def sparkle(self, method):
+        if method == 0:
+            # win
+            c1, c2 = '#ff0000', '#0000ff'
+        else:
+            # lose
+            c1, c2 = '#8b0000', '#ff0000'
+
+        self.body_gradient = list(Color(c1).range_to(Color(c2), self.engine.length()))
+        self.spark_timer.start(self._sp_interval, self)
+
+    def sparkle_step(self):
+        """ Кое-какие шаги для подготовки к отрисовке мигания """
+
+        if self._sp_alg == 0:
+            # случайно: перемешаем массив цветов
+            random.shuffle(self.body_gradient)
+        elif self._sp_alg == 1:
+            # вдоль тела: сдвинем массив цветов назад
+            for i in range(len(self.body_gradient)):
+                if i < len(self.body_gradient) - 1:
+                    self.body_gradient[i] = self.body_gradient[i + 1]
+                else:
+                    self.body_gradient[i] = self.body_gradient[0]
 
     def print_debug_info(self):
         self.engine.print_debug_info()
@@ -246,6 +295,7 @@ class GameBox(QFrame):
                 super(GameBox, self).keyPressEvent(event)
         except engine.StopGameException as e:
             self.stop(str(e))
+            self.sparkle(e.code)
         finally:
             self.update_ui()
 
@@ -258,10 +308,14 @@ class GameBox(QFrame):
                 if not self.isPaused:
                     self.timer.stop()
                     self.timer.start(self.speed, self)
+            elif event.timerId() == self.spark_timer.timerId():
+                self.sparkle_step()
+                self.update_ui()
             else:
                 super(GameBox, self).timerEvent(event)
         except engine.StopGameException as e:
             self.stop(str(e))
+            self.sparkle(e.code)
         finally:
             self.update_ui()
 
@@ -277,31 +331,19 @@ class GameBox(QFrame):
 
     def draw_square(self, left, top, sq_type):
         """ отрисовка квадратика """
-        colors = {
-            engine.FIELD_TYPE_NONE: 0xECE9D8,
-            engine.FIELD_TYPE_EATS1: 0xFF4500,
-            engine.FIELD_TYPE_EATS2: 0xEEEE00,
-            engine.FIELD_TYPE_EATS3: 0x00CDCD,
-            engine.FIELD_TYPE_EATS4: 0x0000CD,
-            engine.FIELD_TYPE_EATS5: 0xCD0000,
-            engine.FIELD_TYPE_HEAD: 0x008B00,
-            engine.FIELD_TYPE_BODY: 0x66CD00,
-            engine.FIELD_TYPE_HOLE: 0x171717,
-            engine.FIELD_TYPE_ROCK: 0x5E6965
-        }
 
         w = left * self.scale_width()
         h = top * self.scale_height()
 
         painter = QPainter(self)
-        color = QColor(colors[sq_type])
 
         if sq_type == engine.FIELD_TYPE_NONE:
-            painter.fillRect(w, h, self.scale_width(), self.scale_height(), color)
+            painter.fillRect(w, h, self.scale_width(), self.scale_height(), QColor(self.Colors[sq_type]))
             return
         elif sq_type == engine.FIELD_TYPE_BODY:
-            coef = self.engine.body_index(top, left) * 10
-            color.setGreen(color.green() + coef)
+            color = QColor(self.body_gradient[self.engine.body_index(top, left)].get_hex())
+        else:
+            color = QColor(self.Colors[sq_type])
 
         painter.fillRect(w + 1, h + 1, self.scale_width() - 2, self.scale_height() - 2, color)
 
