@@ -407,6 +407,11 @@ class Engine(object):
 
     def _try_move(self):
         """ Центральный метод игры, обработка шага игры """
+
+        # если превышен определенный порог - игра пошла серьезная, убираем препятствия
+        if len(self._boa) == (self._width * self._height) // 4:
+            self.remove_barriers()
+
         try:
             while self._locked:
                 pass
@@ -417,10 +422,6 @@ class Engine(object):
 
             self._locked = True
             last = copy.copy(self._boa[len(self._boa)-1])
-
-            # если превышен определенный порог - игра пошла серьезная, убираем препятствия
-            if len(self._boa) == (self._width * self._height) // 4:
-                self.remove_barriers()
 
             # пробуем переместиться
             for i in range(len(self._boa)):

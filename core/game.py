@@ -15,7 +15,7 @@ from . import engine, utils
 
 class Snake(QMainWindow):
 
-    def __init__(self, app, speed=None, length=None, arrange_mech=None, freeze=False):
+    def __init__(self, app, speed=None, length=None, arrange_mech=None, freeze=True):
         super().__init__()
 
         self.app = app
@@ -46,7 +46,7 @@ class Snake(QMainWindow):
 class GameBox(QFrame):
 
     msg2Statusbar = pyqtSignal(str)
-    InitialSpeed = 1000
+    InitialSpeed = 800
     AccInterval = 2000 * 60
     Accelerator = 0.9
     BoxWidth = 20
@@ -65,7 +65,7 @@ class GameBox(QFrame):
         engine.FIELD_TYPE_ROCK: '#5e6965'
     }
 
-    def __init__(self, parent, speed=None, length=None, arrange_mech=None, freeze=False):
+    def __init__(self, parent, speed=None, length=None, arrange_mech=None, freeze=True):
         super().__init__(parent)
 
         self._initial_speed = speed or self.InitialSpeed
