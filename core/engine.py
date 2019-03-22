@@ -32,7 +32,10 @@ ARRANGE_TYPES = (ARRANGE_HELIX, ARRANGE_ZIGZAG)
 
 
 class StopGameException(Exception):
-    pass
+
+    def __init__(self, code, *args):
+        super(StopGameException, self).__init__(*args)
+        self.code = code
 
 
 class Engine(object):
@@ -92,7 +95,7 @@ class Engine(object):
             self._add_eat()
 
     def clear(self):
-        self._initial_boa_size = 2
+        # self._initial_boa_size = 2
         self._locked = False
         self._boa = []
         self._boa_moves = []
@@ -366,16 +369,16 @@ class Engine(object):
 
     def _check_pos_raise(self, top, left, barriers_only=False):
         if top < 0 or top >= self._height or left < 0 or left >= self._width:
-            raise StopGameException('Удавчик убился об стену!')
+            raise StopGameException(1, 'Удавчик убился об стену!')
         if not barriers_only and self._area[top][left] == FIELD_TYPE_BODY:
             if self._boa[1] == [top, left]:
-                raise StopGameException('Удавчик свернулся внутрь себя!')
+                raise StopGameException(1, 'Удавчик свернулся внутрь себя!')
             else:
-                raise StopGameException('Удавчик съел сам себя!')
+                raise StopGameException(1, 'Удавчик съел сам себя!')
         if self._area[top][left] == FIELD_TYPE_HOLE:
-            raise StopGameException('Удавчик провалился в дыру!')
+            raise StopGameException(1, 'Удавчик провалился в дыру!')
         if self._area[top][left] == FIELD_TYPE_ROCK:
-            raise StopGameException('Удавчик протаранил скалу!')
+            raise StopGameException(1, 'Удавчик протаранил скалу!')
 
     def _change_direction(self, horiz, vert):
         """ изменяет направление движения в заданной точке"""
@@ -411,7 +414,7 @@ class Engine(object):
 
             # проверить, вдруг победил
             if self._check_to_win():
-                raise StopGameException('Ура! Победа!')
+                raise StopGameException(0, 'Ура! Победа!')
 
             self._locked = True
             last = copy.copy(self._boa[len(self._boa)-1])
