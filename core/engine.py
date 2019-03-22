@@ -88,9 +88,8 @@ class Engine(object):
             else:
                 self._arrange_helix()
 
-            # на старте препятствия накидывать не будем, т.к. под конец они делают прохождение невозможным
-            # if len(self._boa) < (self._width + self._height) * 2:
-            #     self.create_barriers()
+            if len(self._boa) < (self._width * self._height) // 4:
+                self.create_barriers()
 
             self._add_eat()
 
@@ -418,6 +417,10 @@ class Engine(object):
 
             self._locked = True
             last = copy.copy(self._boa[len(self._boa)-1])
+
+            # если превышен определенный порог - игра пошла серьезная, убираем препятствия
+            if len(self._boa) == (self._width * self._height) // 4:
+                self.remove_barriers()
 
             # пробуем переместиться
             for i in range(len(self._boa)):
