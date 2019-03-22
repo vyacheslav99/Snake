@@ -81,7 +81,8 @@ class GameBox(QFrame):
 
             data = bytes(json.dumps({
                 'speed': self.speed,
-                'freeze': self.freeze_speed
+                'freeze': self.freeze_speed,
+                'start_time': self.start_time.timestamp()
             }), 'utf-8')
 
             obj = pickle.dumps(self.engine)
@@ -98,7 +99,7 @@ class GameBox(QFrame):
             fn = os.path.normpath(os.path.join(os.path.split(sys.argv[0])[0], self.save_file))
 
             if not os.path.exists(fn):
-                return
+                return False
 
             with open(fn, 'rb') as f:
                 data_sz = utils.int_from_bytes(f.read(utils.int_size()))
@@ -110,6 +111,7 @@ class GameBox(QFrame):
 
             self._initial_speed = data['speed']
             self.freeze_speed = data['freeze']
+            self.start_time = datetime.datetime.fromtimestamp(data['start_time']) if 'start_time' in data else None
             self.engine = obj
             return True
         except Exception as e:
@@ -130,7 +132,10 @@ class GameBox(QFrame):
         self.engine.start()
         self.timer.start(self.speed, self)
         self.acc_timer.start(self.AccInterval, self)
-        self.start_time = datetime.datetime.now()
+
+        if not after_load or not self.start_time:
+            self.start_time = datetime.datetime.now()
+
         self.update()
 
         if after_load:
