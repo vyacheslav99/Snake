@@ -1,34 +1,7 @@
 import random
 import copy
 
-FIELD_TYPE_NONE = 0
-FIELD_TYPE_EATS1 = 1
-FIELD_TYPE_EATS2 = 2
-FIELD_TYPE_EATS3 = 3
-FIELD_TYPE_EATS4 = 4
-FIELD_TYPE_EATS5 = 5
-FIELD_TYPE_HEAD = 6
-FIELD_TYPE_BODY = 7
-FIELD_TYPE_HOLE = 8
-FIELD_TYPE_ROCK = 9
-
-FIELD_GROUP_EMPTY = 'empty'
-FIELD_GROUP_BOA = 'boa'
-FIELD_GROUP_EATS = 'eats'
-FIELD_GROUP_BARRIER = 'barrier'
-
-AREA_TYPES = {
-    FIELD_GROUP_EMPTY: (FIELD_TYPE_NONE,),
-    FIELD_GROUP_BOA: (FIELD_TYPE_HEAD, FIELD_TYPE_BODY),
-    FIELD_GROUP_EATS: (FIELD_TYPE_EATS1, FIELD_TYPE_EATS2, FIELD_TYPE_EATS3, FIELD_TYPE_EATS4, FIELD_TYPE_EATS5),
-    FIELD_GROUP_BARRIER: (FIELD_TYPE_HOLE, FIELD_TYPE_ROCK)
-}
-
-DEATH_TYPES = AREA_TYPES[FIELD_GROUP_BOA] + AREA_TYPES[FIELD_GROUP_BARRIER]
-
-ARRANGE_HELIX = 0
-ARRANGE_ZIGZAG = 1
-ARRANGE_TYPES = (ARRANGE_HELIX, ARRANGE_ZIGZAG)
+from . import config
 
 
 class StopGameException(Exception):
@@ -40,14 +13,13 @@ class StopGameException(Exception):
 
 class Engine(object):
 
-    EATS_RAISE_INTERVAL = 15
-
-    def __init__(self, box_width, box_height, boa_size=None, arrange_mech=None):
+    def __init__(self, box_width, box_height, difficulty, boa_size=None, arrange_mech=None):
+        self.difficulty = difficulty
         self._width = box_width
         self._height = box_height
         self._locked = False
         self._initial_boa_size = boa_size or 2
-        self._arrange_mech = arrange_mech or ARRANGE_HELIX
+        self._arrange_mech = arrange_mech or config.ARRANGE_HELIX
 
         if self._initial_boa_size >= self._height * self._width:
             raise Exception(f'Задан стартовый размер удавчика ({self._initial_boa_size}), '
@@ -56,7 +28,7 @@ class Engine(object):
         if self._initial_boa_size < 1:
             raise Exception(f'Задан слишком маленький стартовый размер удавчика: {self._initial_boa_size}!')
 
-        if self._arrange_mech not in ARRANGE_TYPES:
+        if self._arrange_mech not in config.ArrangeTypes:
             raise Exception(f'Задан неверный тип расположения удавчика на поле: {self._arrange_mech}! '
                             'Возможные значения: 0 - 2')
 
@@ -79,11 +51,11 @@ class Engine(object):
 
     def start(self):
         if not self._boa:
-            self._to_rise = self.EATS_RAISE_INTERVAL
+            self._to_rise = config.EatsRaiseInterval
 
-            if self._arrange_mech == ARRANGE_ZIGZAG:
+            if self._arrange_mech == config.ARRANGE_ZIGZAG:
                 self._arrange_zigzag()
-            # elif self._arrange_mech == ARRANGE_HELIX:
+            # elif self._arrange_mech == config.ARRANGE_HELIX:
             #     self._arrange_helix()
             else:
                 self._arrange_helix()
@@ -99,7 +71,7 @@ class Engine(object):
         self._boa = []
         self._boa_moves = []
         self._direct_points = {}
-        self._area = [[FIELD_TYPE_NONE for col in range(self._width)] for row in range(self._height)]
+        self._area = [[config.FIELD_TYPE_NONE for col in range(self._width)] for row in range(self._height)]
 
     def length(self):
         return len(self._boa)
@@ -133,14 +105,14 @@ class Engine(object):
         try:
             self._locked = True
             for _ in range(random.randint(0, self._width * self._height / 100)):
-                top, left = self._rand_coord(FIELD_GROUP_BARRIER)
+                top, left = self._rand_coord(config.FIELD_GROUP_BARRIER)
 
                 if top is None or left is None:
                     return
 
                 of_top = random.choice((-1, 0, 1))
                 of_left = random.choice((-1, 0, 1))
-                el_type = random.choice(AREA_TYPES[FIELD_GROUP_BARRIER])
+                el_type = random.choice(config.AreaTypes[config.FIELD_GROUP_BARRIER])
 
                 for i in range(random.randint(1, 6)):
                     if i == 0:
@@ -162,8 +134,8 @@ class Engine(object):
             self._locked = True
             for i in range(len(self._area)):
                 for j in range(len(self._area[i])):
-                    if self._area[i][j] in AREA_TYPES[FIELD_GROUP_BARRIER]:
-                        self._area[i][j] = FIELD_TYPE_NONE
+                    if self._area[i][j] in config.AreaTypes[config.FIELD_GROUP_BARRIER]:
+                        self._area[i][j] = config.FIELD_TYPE_NONE
         finally:
             self._locked = False
 
@@ -187,7 +159,7 @@ class Engine(object):
 
     def _reflect_boa_on_area(self):
         for i, coord in enumerate(self._boa):
-            self._area[coord[0]][coord[1]] = FIELD_TYPE_HEAD if i == 0 else FIELD_TYPE_BODY
+            self._area[coord[0]][coord[1]] = config.FIELD_TYPE_HEAD if i == 0 else config.FIELD_TYPE_BODY
 
     def _helix_back(self, center_top, center_left):
         direct = 1  # 0 - слева-направо, 1 - снизу-вверх, 2 - справа-налево, 3 - сверху-вниз
@@ -352,32 +324,33 @@ class Engine(object):
         self._reflect_boa_on_area()
 
     def _add_eat(self):
-        top, left = self._rand_coord(FIELD_GROUP_EATS)
+        top, left = self._rand_coord(config.FIELD_GROUP_EATS)
 
         if top is None or left is None:
             return
 
-        self._area[top][left] = random.choice(AREA_TYPES[FIELD_GROUP_EATS])
+        self._area[top][left] = random.choice(config.AreaTypes[config.FIELD_GROUP_EATS])
 
     def _check_pos(self, top, left):
         """ Проверяет, свободны ли на доске точки с заданными координатами """
-        if top < 0 or top >= self._height or left < 0 or left >= self._width or self._area[top][left] in DEATH_TYPES:
+        if top < 0 or top >= self._height or left < 0 or left >= self._width or \
+            self._area[top][left] in config.DeathTypes:
             return False
 
         return True
 
     def _check_pos_raise(self, top, left, barriers_only=False):
         if top < 0 or top >= self._height or left < 0 or left >= self._width:
-            raise StopGameException(1, 'Удавчик убился об стену!')
-        if not barriers_only and self._area[top][left] == FIELD_TYPE_BODY:
+            raise StopGameException(config.LOSE_CODE, 'Удавчик убился об стену!')
+        if not barriers_only and self._area[top][left] == config.FIELD_TYPE_BODY:
             if self._boa[1] == [top, left]:
-                raise StopGameException(1, 'Удавчик свернулся внутрь себя!')
+                raise StopGameException(config.LOSE_CODE, 'Удавчик свернулся внутрь себя!')
             else:
-                raise StopGameException(1, 'Удавчик съел сам себя!')
-        if self._area[top][left] == FIELD_TYPE_HOLE:
-            raise StopGameException(1, 'Удавчик провалился в дыру!')
-        if self._area[top][left] == FIELD_TYPE_ROCK:
-            raise StopGameException(1, 'Удавчик протаранил скалу!')
+                raise StopGameException(config.LOSE_CODE, 'Удавчик съел сам себя!')
+        if self._area[top][left] == config.FIELD_TYPE_HOLE:
+            raise StopGameException(config.LOSE_CODE, 'Удавчик провалился в дыру!')
+        if self._area[top][left] == config.FIELD_TYPE_ROCK:
+            raise StopGameException(config.LOSE_CODE, 'Удавчик протаранил скалу!')
 
     def _change_direction(self, horiz, vert):
         """ изменяет направление движения в заданной точке"""
@@ -389,7 +362,7 @@ class Engine(object):
 
     def _rand_coord(self, cell_type_group):
         coords = tuple((t, l) for t in range(self._width) for l in range(self._height)
-                       if self._check_pos(t, l) and self._area[t][l] not in AREA_TYPES[cell_type_group])
+                       if self._check_pos(t, l) and self._area[t][l] not in config.AreaTypes[cell_type_group])
 
         if not coords:
             return None, None
@@ -400,7 +373,8 @@ class Engine(object):
     def _check_to_win(self):
         for top in range(self._width):
             for left in range(self._height):
-                if self._area[top][left] in AREA_TYPES[FIELD_GROUP_EMPTY] + AREA_TYPES[FIELD_GROUP_EATS]:
+                if self._area[top][left] in config.AreaTypes[config.FIELD_GROUP_EMPTY] + \
+                    config.AreaTypes[config.FIELD_GROUP_EATS]:
                     return False
 
         return True
@@ -418,7 +392,7 @@ class Engine(object):
 
             # проверить, вдруг победил
             if self._check_to_win():
-                raise StopGameException(0, 'Ура! Победа!')
+                raise StopGameException(config.WIN_CODE, 'Ура! Победа!')
 
             self._locked = True
             last = copy.copy(self._boa[len(self._boa)-1])
@@ -440,11 +414,11 @@ class Engine(object):
                     self._check_pos_raise(*self._boa[i], barriers_only=True)
 
             # если в новом месте жратва - надо удлинить хвост
-            if self._area[self._boa[0][0]][self._boa[0][1]] in AREA_TYPES[FIELD_GROUP_EATS]:
+            if self._area[self._boa[0][0]][self._boa[0][1]] in config.AreaTypes[config.FIELD_GROUP_EATS]:
                 self._boa.append(last)
                 self._boa_moves.append(copy.copy(self._boa_moves[len(self._boa_moves)-1]))
             else:
-                self._area[last[0]][last[1]] = FIELD_TYPE_NONE
+                self._area[last[0]][last[1]] = config.FIELD_TYPE_NONE
 
             self._reflect_boa_on_area()
             self._check_pos_raise(*self._boa[0])
@@ -453,7 +427,7 @@ class Engine(object):
             self._to_rise -= 1
 
             if self._to_rise <= 0:
-                self._to_rise = self.EATS_RAISE_INTERVAL
+                self._to_rise = config.EatsRaiseInterval
                 self._add_eat()
         finally:
             self._locked = False

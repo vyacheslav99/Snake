@@ -10,19 +10,19 @@ from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QFrame, QMessageBox
 from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
 from PyQt5.QtGui import QPainter, QColor, QIcon
 
-from . import engine, utils
+from . import engine, utils, config
 
 
 class Snake(QMainWindow):
 
-    def __init__(self, app, speed=None, length=None, arrange_mech=None, freeze=True):
+    def __init__(self, app, difficulty=config.DIFF_EASY, length=None, arrange_mech=None):
         super().__init__()
 
         self.app = app
-        self.box = GameBox(self, speed=speed, length=length, arrange_mech=arrange_mech, freeze=freeze)
+        self.box = GameBox(self, difficulty=difficulty, length=length, arrange_mech=arrange_mech)
         self.setCentralWidget(self.box)
-        self.setWindowIcon(QIcon('app.ico'))
-        self.setWindowTitle('Удавчик')
+        self.setWindowIcon(QIcon(config.MainIcon))
+        self.setWindowTitle(config.MainWindowTitle)
 
         self.statusbar = self.statusBar()
         self.box.msg2Statusbar[str].connect(self.statusbar.showMessage)
@@ -31,7 +31,10 @@ class Snake(QMainWindow):
         self.center()
         self.show()
 
-        self.box.start(self.box.load())
+        if config.NoAutosave:
+            self.box.start()
+        else:
+            self.box.load_and_start(config.AutosaveFile)
 
     def center(self):
         screen = QDesktopWidget().screenGeometry()
@@ -39,57 +42,34 @@ class Snake(QMainWindow):
         self.move((screen.width() - size.width()) / 2, (screen.height() - size.height()) / 2)
 
     def closeEvent(self, event):
-        self.box.save()
+        if not config.NoAutosave:
+            self.box.save(config.AutosaveFile)
         super(Snake, self).closeEvent(event)
 
 
 class GameBox(QFrame):
 
     msg2Statusbar = pyqtSignal(str)
-    InitialSpeed = 800
-    AccInterval = 2000 * 60
-    Accelerator = 0.9
-    BoxWidth = 20
-    BoxHeight = 20
 
-    Colors = {
-        engine.FIELD_TYPE_NONE: '#ece9d8',
-        engine.FIELD_TYPE_EATS1: '#ee7600',
-        engine.FIELD_TYPE_EATS2: '#ffff00',
-        engine.FIELD_TYPE_EATS3: '#cd1076',
-        engine.FIELD_TYPE_EATS4: '#0000cd',
-        engine.FIELD_TYPE_EATS5: '#cd0000',
-        engine.FIELD_TYPE_HEAD: '#008b00',
-        engine.FIELD_TYPE_BODY: ('#7fff00', '#ff1493'),
-        engine.FIELD_TYPE_HOLE: '#171717',
-        engine.FIELD_TYPE_ROCK: '#5e6965'
-    }
-
-    def __init__(self, parent, speed=None, length=None, arrange_mech=None, freeze=True):
+    def __init__(self, parent, difficulty=config.DIFF_EASY, length=None, arrange_mech=None):
         super().__init__(parent)
 
-        self._initial_speed = speed or self.InitialSpeed
-
-        if self._initial_speed <= 0:
-            raise Exception(f'Задана неверная начальная скорость: {self._initial_speed}! '
-                            'Скорость игры не может быть меньше 1!')
-
+        self.difficulty = config.Difficultys[difficulty]
         self.start_time = None
-        self.save_file = 'autosave.dat'
-        self.freeze_speed = freeze
         self.speed = 0
         self.isStarted = False
         self.isPaused = False
-        self._sp_interval = 1
-        self.engine = engine.Engine(GameBox.BoxWidth, GameBox.BoxHeight, boa_size=length, arrange_mech=arrange_mech)
+        self.sp_interval = 1
+        self.engine = engine.Engine(config.BoxWidth, config.BoxHeight, difficulty, boa_size=length,
+                                    arrange_mech=arrange_mech)
         self.timer = QBasicTimer()
         self.acc_timer = QBasicTimer()
         self.spark_timer = QBasicTimer()
         self.setFocusPolicy(Qt.StrongFocus)
 
-    def save(self):
+    def save(self, file_name):
         try:
-            fn = os.path.normpath(os.path.join(os.path.split(sys.argv[0])[0], self.save_file))
+            fn = os.path.join(utils.get_save_dir(), file_name)
 
             if os.path.exists(fn):
                 os.unlink(fn)
@@ -99,7 +79,6 @@ class GameBox(QFrame):
 
             data = bytes(json.dumps({
                 'speed': self.speed,
-                'freeze': self.freeze_speed,
                 'start_time': self.start_time.timestamp()
             }), 'utf-8')
 
@@ -112,9 +91,9 @@ class GameBox(QFrame):
         except Exception as e:
             print(f'{e}')
 
-    def load(self):
+    def load(self, file_name):
         try:
-            fn = os.path.normpath(os.path.join(os.path.split(sys.argv[0])[0], self.save_file))
+            fn = os.path.join(utils.get_save_dir(), file_name)
 
             if not os.path.exists(fn):
                 return False
@@ -127,43 +106,61 @@ class GameBox(QFrame):
             data = json.loads(data)
             obj = pickle.loads(obj)
 
-            self._initial_speed = data['speed']
-            self.freeze_speed = data['freeze']
-            self.start_time = datetime.datetime.fromtimestamp(data['start_time']) if 'start_time' in data else None
+            self.speed = data['speed']
+            self.start_time = datetime.datetime.fromtimestamp(data['start_time'])
             self.engine = obj
             return True
         except Exception as e:
             print(f'{e}')
             return False
 
-    def start(self, after_load=False):
+    def load_and_start(self, file_name):
         self.spark_timer.stop()
 
         if self.isStarted:
             self.stop()
 
-        if not after_load:
-            self.engine.clear()
+        if not self.load(file_name):
+            self.start()
+            return
 
-        self._sp_alg = random.choice((0, 1))
-        self.body_gradient = list(Color(self.Colors[engine.FIELD_TYPE_BODY][0]).range_to(
-            Color(self.Colors[engine.FIELD_TYPE_BODY][1]), (self.BoxWidth * self.BoxHeight) - 1))
+        self.sp_alg = random.choice((config.SP_ALG_RANDOM, config.SP_ALG_ALONG_BODY))
+        self.body_gradient = list(Color(config.Colors[config.FIELD_TYPE_BODY][0]).range_to(
+            Color(config.Colors[config.FIELD_TYPE_BODY][1]), (config.BoxWidth * config.BoxHeight) - 1))
 
         self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
         self.isPaused = False
         self.isStarted = True
-        self.speed = self._initial_speed
         self.engine.start()
         self.timer.start(self.speed, self)
-        self.acc_timer.start(self.AccInterval, self)
+        self.acc_timer.start(config.AccInterval, self)
 
-        if not after_load or not self.start_time:
+        if not self.start_time:
             self.start_time = datetime.datetime.now()
 
         self.update()
+        self.pause()
 
-        if after_load:
-            self.pause()
+    def start(self):
+        self.spark_timer.stop()
+
+        if self.isStarted:
+            self.stop()
+
+        self.engine.clear()
+        self.sp_alg = random.choice((config.SP_ALG_RANDOM, config.SP_ALG_ALONG_BODY))
+        self.body_gradient = list(Color(config.Colors[config.FIELD_TYPE_BODY][0]).range_to(
+            Color(config.Colors[config.FIELD_TYPE_BODY][1]), (config.BoxWidth * config.BoxHeight) - 1))
+
+        self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
+        self.isPaused = False
+        self.isStarted = True
+        self.speed = self.difficulty['InitialSpeed']
+        self.engine.start()
+        self.timer.start(self.speed, self)
+        self.acc_timer.start(config.AccInterval, self)
+        self.start_time = datetime.datetime.now()
+        self.update()
 
     def stop(self, message='Кабздец!'):
         if not self.isStarted:
@@ -173,8 +170,6 @@ class GameBox(QFrame):
         self.acc_timer.stop()
         self.isStarted = False
         self.isPaused = False
-        # self._initial_speed = self.InitialSpeed
-        # self.freeze_speed = False
         self.msg2Statusbar.emit(f'{message}   Размер: {self.engine.length()}')
         self.update()
 
@@ -192,26 +187,24 @@ class GameBox(QFrame):
         else:
             self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
             self.timer.start(self.speed, self)
-            self.acc_timer.start(self.AccInterval, self)
+            self.acc_timer.start(config.AccInterval, self)
 
     def sparkle(self, method):
-        if method == 0:
-            # win
-            c1, c2 = '#ff0000', '#0000ff'
+        if method == config.WIN_CODE:
+            c1, c2 = config.SpWin_GradColor_1, config.SpWin_GradColor_2
         else:
-            # lose
-            c1, c2 = '#8b0000', '#ff0000'
+            c1, c2 = config.SpLose_GradColor_1, config.SpLose_GradColor_2
 
         self.body_gradient = list(Color(c1).range_to(Color(c2), self.engine.length()))
-        self.spark_timer.start(self._sp_interval, self)
+        self.spark_timer.start(self.sp_interval, self)
 
     def sparkle_step(self):
         """ Кое-какие шаги для подготовки к отрисовке мигания """
 
-        if self._sp_alg == 0:
+        if self.sp_alg == config.SP_ALG_RANDOM:
             # случайно: перемешаем массив цветов
             random.shuffle(self.body_gradient)
-        elif self._sp_alg == 1:
+        elif self.sp_alg == config.SP_ALG_ALONG_BODY:
             # вдоль тела: сдвинем массив цветов назад
             for i in range(len(self.body_gradient)):
                 if i < len(self.body_gradient) - 1:
@@ -231,10 +224,10 @@ class GameBox(QFrame):
             print(f'Start time: {self.start_time}')
             print(f'Total left time: {datetime.datetime.now() - self.start_time}')
 
-        print(f'Initial speed: {self._initial_speed}')
+        print(f'Initial speed: {self.difficulty["InitialSpeed"]}')
         print(f'Current speed: {self.speed}')
-        print(f'Acceleration coefficient: {self.Accelerator}')
-        print(f'Acceleration frozen: {self.freeze_speed}')
+        print(f'Acceleration coefficient: {config.Accelerator}')
+        print(f'Acceleration frozen: {self.difficulty["Freeze"]}')
 
         print('')
         print('-= Window =-')
@@ -247,11 +240,11 @@ class GameBox(QFrame):
 
     def scale_width(self):
         """ масштабирование - рассчитывает размер стороны квадрата в пикселях по оси X (ширина) """
-        return self.contentsRect().width() // self.BoxWidth
+        return self.contentsRect().width() // config.BoxWidth
 
     def scale_height(self):
         """ масштабирование - рассчитывает размер стороны квадрата в пикселях по оси Y (высота) """
-        return self.contentsRect().height() // self.BoxHeight
+        return self.contentsRect().height() // config.BoxHeight
 
     def keyPressEvent(self, event):
         key = event.key()
@@ -303,11 +296,12 @@ class GameBox(QFrame):
         try:
             if event.timerId() == self.timer.timerId():
                 self.engine.move()
-            elif event.timerId() == self.acc_timer.timerId() and not self.freeze_speed:
-                self.speed *= self.Accelerator
-                if not self.isPaused:
-                    self.timer.stop()
-                    self.timer.start(self.speed, self)
+            elif event.timerId() == self.acc_timer.timerId() and not self.difficulty['Freeze']:
+                if self.speed > config.MinSpeed:
+                    self.speed *= config.Accelerator
+                    if not self.isPaused:
+                        self.timer.stop()
+                        self.timer.start(self.speed, self)
             elif event.timerId() == self.spark_timer.timerId():
                 self.sparkle_step()
                 self.update_ui()
@@ -320,8 +314,8 @@ class GameBox(QFrame):
             self.update_ui()
 
     def paintEvent(self, event):
-        for i in range(self.BoxHeight):
-            for j in range(self.BoxWidth):
+        for i in range(config.BoxHeight):
+            for j in range(config.BoxWidth):
                 self.draw_square(j, i, self.engine.cell(i, j))
 
     def update_ui(self):
@@ -337,13 +331,13 @@ class GameBox(QFrame):
 
         painter = QPainter(self)
 
-        if sq_type == engine.FIELD_TYPE_NONE:
-            painter.fillRect(w, h, self.scale_width(), self.scale_height(), QColor(self.Colors[sq_type]))
+        if sq_type == config.FIELD_TYPE_NONE:
+            painter.fillRect(w, h, self.scale_width(), self.scale_height(), QColor(config.Colors[sq_type]))
             return
-        elif sq_type == engine.FIELD_TYPE_BODY:
+        elif sq_type == config.FIELD_TYPE_BODY:
             color = QColor(self.body_gradient[self.engine.body_index(top, left)].get_hex())
         else:
-            color = QColor(self.Colors[sq_type])
+            color = QColor(config.Colors[sq_type])
 
         painter.fillRect(w + 1, h + 1, self.scale_width() - 2, self.scale_height() - 2, color)
 

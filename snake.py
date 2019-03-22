@@ -8,19 +8,15 @@ from core import game
 def main():
     ap = argparse.ArgumentParser()
 
-    ap.add_argument('-s', '--speed', type=int,
-                    help='Установить начальную скорость игры (1 шаг в заданный промежуток времени, в мс). '
-                         'По умолчанию 800 мс')
+    ap.add_argument('-d', '--difficulty', type=int, default=2, help='Установить начальную сложность игры (1 - 5)')
     ap.add_argument('-l', '--length', type=int, help='Установить начальный размер удавчика. По умолчанию 2 клетки')
     ap.add_argument('-a', '--arrange_mech', type=int,
                     help='Способ расположения нового удава на поле при старте игры: '
                          '0 - спираль (улитка), 1 - зигзаг. По умолчанию 0')
-    ap.add_argument('-f', '--no_freeze', action='store_true', help='Наращивать скорость')
     args = ap.parse_args()
 
     app = QApplication(sys.argv)
-    snake = game.Snake(app, speed=args.speed, length=args.length, arrange_mech=args.arrange_mech,
-                       freeze=not args.no_freeze)
+    snake = game.Snake(app, difficulty=args.difficulty, length=args.length, arrange_mech=args.arrange_mech)
     sys.exit(app.exec_())
 
 
