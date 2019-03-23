@@ -8,7 +8,7 @@ from core import game
 def main():
     ap = argparse.ArgumentParser()
 
-    ap.add_argument('--cheats_on', type=bool, action='store_true', help='Включить режим читов')
+    ap.add_argument('--cheats_on', action='store_true', help='Включить режим читов')
     ap.add_argument('-d', '--difficulty', type=int, default=2, help='Установить начальную сложность игры (1 - 5)')
     ap.add_argument('-l', '--length', type=int, help='Установить начальный размер удавчика. По умолчанию 2 клетки')
     ap.add_argument('-a', '--arrange_mech', type=int,
@@ -17,7 +17,8 @@ def main():
     args = ap.parse_args()
 
     app = QApplication(sys.argv)
-    snake = game.Snake(app, difficulty=args.difficulty, length=args.length, arrange_mech=args.arrange_mech)
+    snake = game.Snake(app, difficulty=args.difficulty, length=args.length, arrange_mech=args.arrange_mech,
+                       cheats_on=args.cheats_on)
     sys.exit(app.exec_())
 
 
