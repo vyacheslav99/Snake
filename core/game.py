@@ -207,6 +207,13 @@ class GameBox(QFrame):
             self.engine.difficulty = self._difficulty
             self.parent().setWindowTitle(f'{config.MainWindowTitle} [{self._difficulty["EngName"]}]')
 
+    def accelerate(self):
+        if self.speed > config.MinSpeed:
+            self.speed *= config.Accelerator
+            if not self.isPaused:
+                self.timer.stop()
+                self.timer.start(self.speed, self)
+
     def sparkle(self, method):
         if method == config.WIN_CODE:
             c1, c2 = config.SpWin_GradColor_1, config.SpWin_GradColor_2
@@ -308,7 +315,7 @@ class GameBox(QFrame):
             # остальное только с включеным режимом читерства
             elif not self.cheats_on:
                 return
-            
+
             elif key == Qt.Key_B:
                 self.engine.create_barriers()
 
@@ -328,11 +335,7 @@ class GameBox(QFrame):
             if event.timerId() == self.timer.timerId():
                 self.engine.move()
             elif event.timerId() == self.acc_timer.timerId() and not self._difficulty['Freeze']:
-                if self.speed > config.MinSpeed:
-                    self.speed *= config.Accelerator
-                    if not self.isPaused:
-                        self.timer.stop()
-                        self.timer.start(self.speed, self)
+                self.accelerate()
             elif event.timerId() == self.spark_timer.timerId():
                 self.sparkle_step()
                 self.update_ui()
