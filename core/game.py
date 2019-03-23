@@ -89,6 +89,8 @@ class GameBox(QFrame):
                 f.write(utils.int_to_bytes(len(data)))
                 f.write(data)
                 f.write(obj)
+
+            print(f'Saved to: {file_name}')
         except Exception as e:
             print(f'{e}')
 
@@ -111,6 +113,7 @@ class GameBox(QFrame):
             self.start_time = datetime.datetime.fromtimestamp(data['start_time'])
             self.engine = obj
             self.set_difficulty(data['difficulty'])
+            print(f'Loaded from: {file_name}')
             return True
         except Exception as e:
             print(f'{e}')
@@ -140,6 +143,7 @@ class GameBox(QFrame):
         if not self.start_time:
             self.start_time = datetime.datetime.now()
 
+        print('STARTED')
         self.update()
         self.pause()
 
@@ -163,6 +167,7 @@ class GameBox(QFrame):
         self.timer.start(self.speed, self)
         self.acc_timer.start(config.AccInterval, self)
         self.start_time = datetime.datetime.now()
+        print('STARTED')
         self.update()
 
     def stop(self, message=''):
@@ -174,6 +179,7 @@ class GameBox(QFrame):
         self.isStarted = False
         self.isPaused = False
         self.msg2Statusbar.emit(f'{message}   Размер: {self.engine.length()}')
+        print('STOPPED')
         self.update()
 
     def pause(self):
@@ -186,11 +192,13 @@ class GameBox(QFrame):
             self.timer.stop()
             self.acc_timer.stop()
             self.msg2Statusbar.emit('-= ПАУЗА =-')
+            print('Paused')
             self.update()
         else:
             self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
             self.timer.start(self.speed, self)
             self.acc_timer.start(config.AccInterval, self)
+            print('Unpaused')
 
     def set_difficulty(self, new_dif):
         if new_dif not in config.Difficultys:
@@ -206,16 +214,21 @@ class GameBox(QFrame):
             self._dif_code = new_dif
             self.engine.difficulty = self._difficulty
             self.parent().setWindowTitle(f'{config.MainWindowTitle} [{self._difficulty["EngName"]}]')
+            print(f'Difficulty changed to: {self._difficulty["EngName"]}')
 
     def accelerate(self):
         if self.speed > config.MinSpeed:
             self.speed *= config.Accelerator
+            print(f'Speed increased to: {self.speed}')
+
             if not self.isPaused:
                 self.timer.stop()
                 self.timer.start(self.speed, self)
 
     def decelerate(self):
         self.speed /= config.Accelerator
+        print(f'Speed decreased to: {self.speed}')
+
         if not self.isPaused:
             self.timer.stop()
             self.timer.start(self.speed, self)
@@ -285,6 +298,7 @@ class GameBox(QFrame):
         try:
             if key == Qt.Key_Escape:
                 # self.parent().app.quit()
+                print('EXIT')
                 self.parent().close()
             if key == Qt.Key_S:
                 self.start()
