@@ -61,7 +61,7 @@ class Engine(object):
                 self._arrange_helix()
 
             if len(self._boa) < (self._width * self._height) // 4:
-                self.create_barriers()
+                self.create_barriers(self.difficulty['Barriers'])
 
             self._add_eat()
 
@@ -96,7 +96,7 @@ class Engine(object):
         """ повернуть вниз """
         self._change_direction(1, 0)
 
-    def create_barriers(self):
+    def create_barriers(self, n_passes=1):
         """ накидывает на поле несколько случайных препятствий """
 
         while self._locked:
@@ -104,23 +104,25 @@ class Engine(object):
 
         try:
             self._locked = True
-            for _ in range(random.randint(0, self._width * self._height / 100)):
-                top, left = self._rand_coord(config.FIELD_GROUP_BARRIER)
 
-                if top is None or left is None:
-                    return
+            for _ in range(n_passes):
+                for __ in range(random.randint(0, self._width * self._height / 100)):
+                    top, left = self._rand_coord(config.FIELD_GROUP_BARRIER)
 
-                of_top = random.choice((-1, 0, 1))
-                of_left = random.choice((-1, 0, 1))
-                el_type = random.choice(config.AreaTypes[config.FIELD_GROUP_BARRIER])
+                    if top is None or left is None:
+                        return
 
-                for i in range(random.randint(1, 6)):
-                    if i == 0:
-                        self._area[top][left] = el_type
-                    else:
-                        t, l = top + of_top * i, left + of_left * i
-                        if self._check_pos(t, l):
-                            self._area[t][l] = el_type
+                    of_top = random.choice((-1, 0, 1))
+                    of_left = random.choice((-1, 0, 1))
+                    el_type = random.choice(config.AreaTypes[config.FIELD_GROUP_BARRIER])
+
+                    for i in range(random.randint(1, 6)):
+                        if i == 0:
+                            self._area[top][left] = el_type
+                        else:
+                            t, l = top + of_top * i, left + of_left * i
+                            if self._check_pos(t, l):
+                                self._area[t][l] = el_type
         finally:
             self._locked = False
 

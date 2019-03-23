@@ -155,6 +155,7 @@ class GameBox(QFrame):
             Color(config.Colors[config.FIELD_TYPE_BODY][1]), (config.BoxWidth * config.BoxHeight) - 1))
 
         self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
+        self.set_difficulty(self._next_diff)
         self.isPaused = False
         self.isStarted = True
         self.speed = self._difficulty['InitialSpeed']
@@ -195,15 +196,16 @@ class GameBox(QFrame):
         if new_dif not in config.Difficultys:
             return
 
+        self._next_diff = new_dif
+
         if self.isStarted:
             self.parent().setWindowTitle(f'{config.MainWindowTitle} [{self._difficulty["EngName"]}] -> '
                                          f'[{config.Difficultys[new_dif]["EngName"]}]')
         else:
+            self._difficulty = config.Difficultys[new_dif]
+            self._dif_code = new_dif
+            self.engine.difficulty = self._difficulty
             self.parent().setWindowTitle(f'{config.MainWindowTitle} [{self._difficulty["EngName"]}]')
-
-        self._difficulty = config.Difficultys[new_dif]
-        self._dif_code = new_dif
-        self.engine.difficulty = self._difficulty
 
     def sparkle(self, method):
         if method == config.WIN_CODE:

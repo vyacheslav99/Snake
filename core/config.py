@@ -50,7 +50,7 @@ Difficultys = {
     DIFF_VERY_HARD: {
         'InitialSpeed': 1000,
         'Freeze': False,
-        'Barriers': 2,
+        'Barriers': 1,
         'EngName': 'Very Hard',
         'RuName': 'Очень Тяжелая'
     }
