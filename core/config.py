@@ -3,9 +3,9 @@ MainWindowTitle = 'Удавчик'
 
 AutosaveFile = 'autosave.dat'
 QuicksaveFile = 'quicksave.dat'
-NoAutosave = True
+NoAutosave = True   # todo: Потом включить обратно
 
-MinSpeed = 100
+MinSpeed = 50
 AccInterval = 2000 * 60
 Accelerator = 0.9
 
@@ -34,14 +34,14 @@ Difficultys = {
         'RuName': 'Легкая'
     },
     DIFF_NORMAL: {
-        'InitialSpeed': 650,
+        'InitialSpeed': 500,
         'Freeze': True,
         'Barriers': 4,
         'EngName': 'Normal',
         'RuName': 'Нормальная'
     },
     DIFF_HARD: {
-        'InitialSpeed': 500,
+        'InitialSpeed': 300,
         'Freeze': True,
         'Barriers': 6,
         'EngName': 'Hard',
@@ -50,7 +50,7 @@ Difficultys = {
     DIFF_VERY_HARD: {
         'InitialSpeed': 1000,
         'Freeze': False,
-        'Barriers': 1,
+        'Barriers': 2,
         'EngName': 'Very Hard',
         'RuName': 'Очень Тяжелая'
     }

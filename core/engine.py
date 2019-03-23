@@ -155,9 +155,9 @@ class Engine(object):
         print(f'Dimensions:  Height: {self._height} Width: {self._width} Area: {self._width * self._height}')
         print(f'Start boa size: {self._initial_boa_size}')
         print(f'Current boa size: {len(self._boa)}')
-        print(f'Arrange method: {self._arrange_mech}')
         print(f'Head position:  Top: {self._boa[0][0]} Left: {self._boa[0][1]}')
         print(f'Head direction:  Top: {self._boa_moves[0][0]} Left: {self._boa_moves[0][1]}')
+        print(f'Arrange method: {self._arrange_mech}')
 
     def _reflect_boa_on_area(self):
         for i, coord in enumerate(self._boa):

@@ -214,6 +214,12 @@ class GameBox(QFrame):
                 self.timer.stop()
                 self.timer.start(self.speed, self)
 
+    def decelerate(self):
+        self.speed /= config.Accelerator
+        if not self.isPaused:
+            self.timer.stop()
+            self.timer.start(self.speed, self)
+
     def sparkle(self, method):
         if method == config.WIN_CODE:
             c1, c2 = config.SpWin_GradColor_1, config.SpWin_GradColor_2
@@ -238,10 +244,9 @@ class GameBox(QFrame):
                     self.body_gradient[i] = self.body_gradient[0]
 
     def print_debug_info(self):
-        self.engine.print_debug_info()
-
-        print('')
         print('-= Game parameters =-')
+        print(f'Cheats mode: {"ON" if self.cheats_on else "OFF"}')
+        print(f'Difficulty: {self._difficulty["EngName"]}')
         print(f'Started: {self.isStarted}')
         print(f'Paused: {self.isPaused}')
 
@@ -253,6 +258,9 @@ class GameBox(QFrame):
         print(f'Current speed: {self.speed}')
         print(f'Acceleration coefficient: {config.Accelerator}')
         print(f'Acceleration frozen: {self._difficulty["Freeze"]}')
+
+        print('')
+        self.engine.print_debug_info()
 
         print('')
         print('-= Window =-')
@@ -278,50 +286,41 @@ class GameBox(QFrame):
             if key == Qt.Key_Escape:
                 # self.parent().app.quit()
                 self.parent().close()
-
             if key == Qt.Key_S:
                 self.start()
-
             elif key == Qt.Key_I:
                 self.print_debug_info()
-
             elif key in (Qt.Key_P, Qt.Key_Space):
                 self.pause()
-
             elif key in (Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5):
                 self.set_difficulty((Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5).index(key) + 1)
-
             elif not self.isStarted or self.isPaused:
                 return
-
-            elif key == Qt.Key_F6:
+            elif key == Qt.Key_F5:
                 self.save(config.QuicksaveFile)
-
             elif key == Qt.Key_F9:
                 self.load_and_start(config.QuicksaveFile)
-
+            elif key == Qt.Key_E:
+                self.stop('Игра остановлена игроком')
             elif key == Qt.Key_Right:
                 self.engine.turn_right()
-
             elif key == Qt.Key_Left:
                 self.engine.turn_left()
-
             elif key == Qt.Key_Up:
                 self.engine.turn_up()
-
             elif key == Qt.Key_Down:
                 self.engine.turn_down()
-
             # остальное только с включеным режимом читерства
             elif not self.cheats_on:
                 return
-
             elif key == Qt.Key_B:
                 self.engine.create_barriers()
-
             elif key == Qt.Key_C:
                 self.engine.remove_barriers()
-
+            elif key == Qt.Key_Plus:
+                self.accelerate()
+            elif key == Qt.Key_Minus:
+                self.decelerate()
             else:
                 super(GameBox, self).keyPressEvent(event)
         except engine.StopGameException as e:
