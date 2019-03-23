@@ -143,7 +143,7 @@ class GameBox(QFrame):
         if not self.start_time:
             self.start_time = datetime.datetime.now()
 
-        print('STARTED')
+        print('< Started >')
         self.update()
         self.pause()
 
@@ -167,7 +167,7 @@ class GameBox(QFrame):
         self.timer.start(self.speed, self)
         self.acc_timer.start(config.AccInterval, self)
         self.start_time = datetime.datetime.now()
-        print('STARTED')
+        print('< Started >')
         self.update()
 
     def stop(self, message=''):
@@ -179,7 +179,7 @@ class GameBox(QFrame):
         self.isStarted = False
         self.isPaused = False
         self.msg2Statusbar.emit(f'{message}   Размер: {self.engine.length()}')
-        print('STOPPED')
+        print('< Stopped >')
         self.update()
 
     def pause(self):
@@ -192,13 +192,13 @@ class GameBox(QFrame):
             self.timer.stop()
             self.acc_timer.stop()
             self.msg2Statusbar.emit('-= ПАУЗА =-')
-            print('Paused')
+            print('< Paused >')
             self.update()
         else:
             self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
             self.timer.start(self.speed, self)
             self.acc_timer.start(config.AccInterval, self)
-            print('Unpaused')
+            print('< Unpaused >')
 
     def set_difficulty(self, new_dif):
         if new_dif not in config.Difficultys:
@@ -219,7 +219,7 @@ class GameBox(QFrame):
     def accelerate(self):
         if self.speed > config.MinSpeed:
             self.speed *= config.Accelerator
-            print(f'Speed increased to: {self.speed}')
+            print(f'Speed increased to: {round(self.speed / 1000, 3)}')
 
             if not self.isPaused:
                 self.timer.stop()
@@ -227,7 +227,7 @@ class GameBox(QFrame):
 
     def decelerate(self):
         self.speed /= config.Accelerator
-        print(f'Speed decreased to: {self.speed}')
+        print(f'Speed decreased to: {round(self.speed / 1000, 3)}')
 
         if not self.isPaused:
             self.timer.stop()
@@ -267,8 +267,8 @@ class GameBox(QFrame):
             print(f'Start time: {self.start_time}')
             print(f'Total left time: {datetime.datetime.now() - self.start_time}')
 
-        print(f'Initial speed: {self._difficulty["InitialSpeed"]}')
-        print(f'Current speed: {self.speed}')
+        print(f'Initial speed: {round(self._difficulty["InitialSpeed"] / 1000, 3)}')
+        print(f'Current speed: {round(self.speed / 1000, 3)}')
         print(f'Acceleration coefficient: {config.Accelerator}')
         print(f'Acceleration frozen: {self._difficulty["Freeze"]}')
 
