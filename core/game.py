@@ -15,11 +15,11 @@ from . import engine, utils, config
 
 class Snake(QMainWindow):
 
-    def __init__(self, app, difficulty=config.DIFF_EASY, length=None, arrange_mech=None):
+    def __init__(self, app, difficulty=config.DIFF_EASY, length=None, arrange_mech=None, cheats_on=False):
         super().__init__()
 
         self.app = app
-        self.box = GameBox(self, difficulty=difficulty, length=length, arrange_mech=arrange_mech)
+        self.box = GameBox(self, difficulty=difficulty, length=length, arrange_mech=arrange_mech, cheats_on=cheats_on)
         self.setCentralWidget(self.box)
         self.setWindowIcon(QIcon(config.MainIcon))
         self.setWindowTitle(config.MainWindowTitle)
@@ -51,17 +51,17 @@ class GameBox(QFrame):
 
     msg2Statusbar = pyqtSignal(str)
 
-    def __init__(self, parent, difficulty=config.DIFF_EASY, length=None, arrange_mech=None):
+    def __init__(self, parent, difficulty=config.DIFF_EASY, length=None, arrange_mech=None, cheats_on=False):
         super().__init__(parent)
 
-        self.set_difficulty(difficulty)
+        self.cheats_on = cheats_on
         self.start_time = None
         self.speed = 0
         self.isStarted = False
         self.isPaused = False
         self.sp_interval = 1
-        self.engine = engine.Engine(config.BoxWidth, config.BoxHeight, self._difficulty, boa_size=length,
-                                    arrange_mech=arrange_mech)
+        self.engine = engine.Engine(config.BoxWidth, config.BoxHeight, boa_size=length, arrange_mech=arrange_mech)
+        self.set_difficulty(difficulty)
         self.timer = QBasicTimer()
         self.acc_timer = QBasicTimer()
         self.spark_timer = QBasicTimer()
@@ -120,7 +120,7 @@ class GameBox(QFrame):
         self.spark_timer.stop()
 
         if self.isStarted:
-            self.stop()
+            self.stop('Игра остановлена')
 
         if not self.load(file_name):
             self.start()
@@ -147,7 +147,7 @@ class GameBox(QFrame):
         self.spark_timer.stop()
 
         if self.isStarted:
-            self.stop()
+            self.stop('Игра остановлена')
 
         self.engine.clear()
         self.sp_alg = random.choice((config.SP_ALG_RANDOM, config.SP_ALG_ALONG_BODY))
@@ -165,7 +165,7 @@ class GameBox(QFrame):
         self.start_time = datetime.datetime.now()
         self.update()
 
-    def stop(self, message='Кабздец!'):
+    def stop(self, message=''):
         if not self.isStarted:
             return
 
@@ -281,8 +281,17 @@ class GameBox(QFrame):
             elif key in (Qt.Key_P, Qt.Key_Space):
                 self.pause()
 
+            elif key in (Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5):
+                self.set_difficulty((Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5).index(key) + 1)
+
             elif not self.isStarted or self.isPaused:
                 return
+
+            elif key == Qt.Key_F6:
+                self.save(config.QuicksaveFile)
+
+            elif key == Qt.Key_F9:
+                self.load_and_start(config.QuicksaveFile)
 
             elif key == Qt.Key_Right:
                 self.engine.turn_right()
@@ -296,6 +305,10 @@ class GameBox(QFrame):
             elif key == Qt.Key_Down:
                 self.engine.turn_down()
 
+            # остальное только с включеным режимом читерства
+            elif not self.cheats_on:
+                return
+            
             elif key == Qt.Key_B:
                 self.engine.create_barriers()
 

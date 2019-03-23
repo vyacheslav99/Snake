@@ -13,8 +13,8 @@ class StopGameException(Exception):
 
 class Engine(object):
 
-    def __init__(self, box_width, box_height, difficulty, boa_size=None, arrange_mech=None):
-        self.difficulty = difficulty
+    def __init__(self, box_width, box_height, boa_size=None, arrange_mech=None):
+        self.difficulty = None
         self._width = box_width
         self._height = box_height
         self._locked = False

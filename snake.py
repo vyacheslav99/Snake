@@ -8,6 +8,7 @@ from core import game
 def main():
     ap = argparse.ArgumentParser()
 
+    ap.add_argument('--cheats_on', type=bool, action='store_true', help='Включить режим читов')
     ap.add_argument('-d', '--difficulty', type=int, default=2, help='Установить начальную сложность игры (1 - 5)')
     ap.add_argument('-l', '--length', type=int, help='Установить начальный размер удавчика. По умолчанию 2 клетки')
     ap.add_argument('-a', '--arrange_mech', type=int,
