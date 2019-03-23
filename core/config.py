@@ -22,27 +22,37 @@ Difficultys = {
     DIFF_VERY_EASY: {
         'InitialSpeed': 1000,
         'Freeze': True,
-        'Barriers': 1
+        'Barriers': 1,
+        'EngName': 'Very Easy',
+        'RuName': 'Очень Легкая'
     },
     DIFF_EASY: {
         'InitialSpeed': 800,
         'Freeze': True,
-        'Barriers': 2
+        'Barriers': 2,
+        'EngName': 'Easy',
+        'RuName': 'Легкая'
     },
     DIFF_NORMAL: {
         'InitialSpeed': 650,
         'Freeze': True,
-        'Barriers': 4
+        'Barriers': 4,
+        'EngName': 'Normal',
+        'RuName': 'Нормальная'
     },
     DIFF_HARD: {
         'InitialSpeed': 500,
         'Freeze': True,
-        'Barriers': 6
+        'Barriers': 6,
+        'EngName': 'Hard',
+        'RuName': 'Тяжелая'
     },
     DIFF_VERY_HARD: {
         'InitialSpeed': 1000,
         'Freeze': False,
-        'Barriers': 2
+        'Barriers': 2,
+        'EngName': 'Very Hard',
+        'RuName': 'Очень Тяжелая'
     }
 }
 

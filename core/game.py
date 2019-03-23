@@ -54,13 +54,13 @@ class GameBox(QFrame):
     def __init__(self, parent, difficulty=config.DIFF_EASY, length=None, arrange_mech=None):
         super().__init__(parent)
 
-        self.difficulty = config.Difficultys[difficulty]
+        self.set_difficulty(difficulty)
         self.start_time = None
         self.speed = 0
         self.isStarted = False
         self.isPaused = False
         self.sp_interval = 1
-        self.engine = engine.Engine(config.BoxWidth, config.BoxHeight, difficulty, boa_size=length,
+        self.engine = engine.Engine(config.BoxWidth, config.BoxHeight, self._difficulty, boa_size=length,
                                     arrange_mech=arrange_mech)
         self.timer = QBasicTimer()
         self.acc_timer = QBasicTimer()
@@ -79,7 +79,8 @@ class GameBox(QFrame):
 
             data = bytes(json.dumps({
                 'speed': self.speed,
-                'start_time': self.start_time.timestamp()
+                'start_time': self.start_time.timestamp(),
+                'difficulty': self._dif_code
             }), 'utf-8')
 
             obj = pickle.dumps(self.engine)
@@ -109,6 +110,7 @@ class GameBox(QFrame):
             self.speed = data['speed']
             self.start_time = datetime.datetime.fromtimestamp(data['start_time'])
             self.engine = obj
+            self.set_difficulty(data['difficulty'])
             return True
         except Exception as e:
             print(f'{e}')
@@ -155,7 +157,7 @@ class GameBox(QFrame):
         self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
         self.isPaused = False
         self.isStarted = True
-        self.speed = self.difficulty['InitialSpeed']
+        self.speed = self._difficulty['InitialSpeed']
         self.engine.start()
         self.timer.start(self.speed, self)
         self.acc_timer.start(config.AccInterval, self)
@@ -188,6 +190,20 @@ class GameBox(QFrame):
             self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
             self.timer.start(self.speed, self)
             self.acc_timer.start(config.AccInterval, self)
+
+    def set_difficulty(self, new_dif):
+        if new_dif not in config.Difficultys:
+            return
+
+        if self.isStarted:
+            self.parent().setWindowTitle(f'{config.MainWindowTitle} [{self._difficulty["EngName"]}] -> '
+                                         f'[{config.Difficultys[new_dif]["EngName"]}]')
+        else:
+            self.parent().setWindowTitle(f'{config.MainWindowTitle} [{self._difficulty["EngName"]}]')
+
+        self._difficulty = config.Difficultys[new_dif]
+        self._dif_code = new_dif
+        self.engine.difficulty = self._difficulty
 
     def sparkle(self, method):
         if method == config.WIN_CODE:
@@ -224,10 +240,10 @@ class GameBox(QFrame):
             print(f'Start time: {self.start_time}')
             print(f'Total left time: {datetime.datetime.now() - self.start_time}')
 
-        print(f'Initial speed: {self.difficulty["InitialSpeed"]}')
+        print(f'Initial speed: {self._difficulty["InitialSpeed"]}')
         print(f'Current speed: {self.speed}')
         print(f'Acceleration coefficient: {config.Accelerator}')
-        print(f'Acceleration frozen: {self.difficulty["Freeze"]}')
+        print(f'Acceleration frozen: {self._difficulty["Freeze"]}')
 
         print('')
         print('-= Window =-')
@@ -296,7 +312,7 @@ class GameBox(QFrame):
         try:
             if event.timerId() == self.timer.timerId():
                 self.engine.move()
-            elif event.timerId() == self.acc_timer.timerId() and not self.difficulty['Freeze']:
+            elif event.timerId() == self.acc_timer.timerId() and not self._difficulty['Freeze']:
                 if self.speed > config.MinSpeed:
                     self.speed *= config.Accelerator
                     if not self.isPaused:
