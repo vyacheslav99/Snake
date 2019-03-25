@@ -3,7 +3,7 @@ MainWindowTitle = 'Удавчик'
 
 AutosaveFile = 'autosave.dat'
 QuicksaveFile = 'quicksave.dat'
-NoAutosave = True   # todo: Потом включить обратно
+NoAutosave = False
 
 MinSpeed = 50
 AccInterval = 2000 * 60
