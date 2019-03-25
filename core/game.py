@@ -194,13 +194,11 @@ class GameBox(QFrame):
             self.timer.stop()
             self.acc_timer.stop()
             self.msg2Statusbar.emit('-= ПАУЗА =-')
-            print('< Paused >')
             self.update()
         else:
             self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
             self.timer.start(self.speed, self)
             self.acc_timer.start(config.AccInterval, self)
-            print('< Unpaused >')
 
     def set_difficulty(self, new_dif):
         if new_dif not in config.Difficultys:
