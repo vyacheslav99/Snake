@@ -151,7 +151,7 @@ class Engine(object):
             return 0
 
     def print_debug_info(self):
-        print('-= Core parameters =-')
+        print('-= Core =-')
         print(f'Dimensions:  Height: {self._height} Width: {self._width} Area: {self._width * self._height}')
         print(f'Start boa size: {self._initial_boa_size}')
         print(f'Current boa size: {len(self._boa)}')

@@ -257,7 +257,19 @@ class GameBox(QFrame):
                     self.body_gradient[i] = self.body_gradient[0]
 
     def print_debug_info(self):
-        print('-= Game parameters =-')
+        print('-= Window =-')
+        print(f'Top: {self.parent().geometry().top()}')
+        print(f'Left: {self.parent().geometry().left()}')
+        print(f'Height: {self.parent().geometry().height()}')
+        print(f'Width: {self.parent().geometry().width()}')
+        print(f'Area Height: {self.contentsRect().height()}')
+        print(f'Area Width: {self.contentsRect().width()}')
+
+        print('')
+        self.engine.print_debug_info()
+
+        print('')
+        print('-= Game =-')
         print(f'Cheats mode: {"ON" if self.cheats_on else "OFF"}')
         print(f'Difficulty: {self._difficulty["EngName"]}')
         print(f'Started: {self.isStarted}')
@@ -271,18 +283,6 @@ class GameBox(QFrame):
         print(f'Current speed: {round(self.speed / 1000, 3)}')
         print(f'Acceleration coefficient: {config.Accelerator}')
         print(f'Acceleration frozen: {self._difficulty["Freeze"]}')
-
-        print('')
-        self.engine.print_debug_info()
-
-        print('')
-        print('-= Window =-')
-        print(f'Top: {self.parent().geometry().top()}')
-        print(f'Left: {self.parent().geometry().left()}')
-        print(f'Height: {self.parent().geometry().height()}')
-        print(f'Width: {self.parent().geometry().width()}')
-        print(f'Area Height: {self.contentsRect().height()}')
-        print(f'Area Width: {self.contentsRect().width()}')
 
     def scale_width(self):
         """ масштабирование - рассчитывает размер стороны квадрата в пикселях по оси X (ширина) """
