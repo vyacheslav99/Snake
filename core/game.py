@@ -44,6 +44,8 @@ class Snake(QMainWindow):
     def closeEvent(self, event):
         if not config.NoAutosave:
             self.box.save(config.AutosaveFile)
+
+        print('< Exit >')
         super(Snake, self).closeEvent(event)
 
 
@@ -298,7 +300,6 @@ class GameBox(QFrame):
         try:
             if key == Qt.Key_Escape:
                 # self.parent().app.quit()
-                print('EXIT')
                 self.parent().close()
             if key == Qt.Key_S:
                 self.start()
