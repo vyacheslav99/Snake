@@ -128,6 +128,7 @@ class GameBox(QFrame):
             self.start()
             return
 
+        self.clear_status_messages()
         self.sp_alg = random.choice((config.SP_ALG_RANDOM, config.SP_ALG_ALONG_BODY))
         self.body_gradient = list(Color(config.Colors[config.FIELD_TYPE_BODY][0]).range_to(
             Color(config.Colors[config.FIELD_TYPE_BODY][1]), (config.BoxWidth * config.BoxHeight) - 1))
@@ -152,6 +153,7 @@ class GameBox(QFrame):
         if self.isStarted:
             self.stop('Игра остановлена')
 
+        self.clear_status_messages()
         self.engine.clear()
         self.sp_alg = random.choice((config.SP_ALG_RANDOM, config.SP_ALG_ALONG_BODY))
         self.body_gradient = list(Color(config.Colors[config.FIELD_TYPE_BODY][0]).range_to(
@@ -206,13 +208,13 @@ class GameBox(QFrame):
         if self.isStarted:
             # self.parent().setWindowTitle(f'{config.MainWindowTitle} [{self._difficulty["EngName"]}] -> '
             #                              f'[{config.Difficultys[new_dif]["EngName"]}]')
-            self.set_status_message(f'[{self._difficulty["EngName"]}] -> [{config.Difficultys[new_dif]["EngName"]}]',
+            self.set_status_message(f'{self._difficulty["EngName"]} -> {config.Difficultys[new_dif]["EngName"]}',
                                     index=2)
         else:
             self._difficulty = config.Difficultys[new_dif]
             self._dif_code = new_dif
             self.engine.difficulty = self._difficulty
-            self.set_status_message(f'[{self._difficulty["EngName"]}]', index=2)
+            self.set_status_message(f'{self._difficulty["EngName"]}', index=2)
             print(f'Difficulty changed to: {self._difficulty["EngName"]}')
 
     def accelerate(self):
@@ -393,6 +395,9 @@ class GameBox(QFrame):
 
         if index < len(self.status_labels):
             self.status_labels[index].setText(message)
+
+    def clear_status_messages(self):
+        self.set_status_messages(('', '', ''))
 
     def draw_square(self, left, top, sq_type):
         """ отрисовка квадратика """
