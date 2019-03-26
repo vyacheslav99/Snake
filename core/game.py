@@ -124,11 +124,12 @@ class GameBox(QFrame):
         if self.isStarted:
             self.stop('Игра остановлена')
 
+        self.clear_status_messages()
+
         if not self.load(file_name):
             self.start()
             return
 
-        self.clear_status_messages()
         self.sp_alg = random.choice((config.SP_ALG_RANDOM, config.SP_ALG_ALONG_BODY))
         self.body_gradient = list(Color(config.Colors[config.FIELD_TYPE_BODY][0]).range_to(
             Color(config.Colors[config.FIELD_TYPE_BODY][1]), (config.BoxWidth * config.BoxHeight) - 1))
