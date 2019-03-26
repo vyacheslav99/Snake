@@ -6,7 +6,7 @@ import datetime
 import copy
 from colour import Color
 
-from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QFrame, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QFrame, QMessageBox, QLabel
 from PyQt5.QtCore import Qt, QBasicTimer, pyqtSignal
 from PyQt5.QtGui import QPainter, QColor, QIcon
 
@@ -23,9 +23,6 @@ class Snake(QMainWindow):
         self.setCentralWidget(self.box)
         self.setWindowIcon(QIcon(config.MainIcon))
         self.setWindowTitle(config.MainWindowTitle)
-
-        self.statusbar = self.statusBar()
-        self.box.msg2Statusbar[str].connect(self.statusbar.showMessage)
 
         self.resize(380, 385)
         self.center()
@@ -51,10 +48,15 @@ class Snake(QMainWindow):
 
 class GameBox(QFrame):
 
-    msg2Statusbar = pyqtSignal(str)
-
     def __init__(self, parent, difficulty=config.DIFF_EASY, length=None, arrange_mech=None, cheats_on=False):
         super().__init__(parent)
+
+        sb_scales = (1, 2, 0)
+        self.statusbar = self.parent().statusBar()
+        self.status_labels = []
+        for i in range(3):
+            self.status_labels.append(QLabel())
+            self.statusbar.addWidget(self.status_labels[i], sb_scales[i])
 
         self.cheats_on = cheats_on
         self.start_time = None
@@ -85,12 +87,10 @@ class GameBox(QFrame):
                 'difficulty': self._dif_code
             }), 'utf-8')
 
-            obj = pickle.dumps(self.engine)
-
             with open(fn, 'wb') as f:
                 f.write(utils.int_to_bytes(len(data)))
                 f.write(data)
-                f.write(obj)
+                f.write(pickle.dumps(self.engine))
 
             print(f'Saved to: {file_name}')
         except Exception as e:
@@ -105,11 +105,8 @@ class GameBox(QFrame):
 
             with open(fn, 'rb') as f:
                 data_sz = utils.int_from_bytes(f.read(utils.int_size()))
-                data = f.read(data_sz).decode('utf-8')
-                obj = f.read()
-
-            data = json.loads(data)
-            obj = pickle.loads(obj)
+                data = json.loads(f.read(data_sz).decode('utf-8'))
+                obj = pickle.loads(f.read())
 
             self.speed = data['speed']
             self.start_time = datetime.datetime.fromtimestamp(data['start_time'])
@@ -135,7 +132,7 @@ class GameBox(QFrame):
         self.body_gradient = list(Color(config.Colors[config.FIELD_TYPE_BODY][0]).range_to(
             Color(config.Colors[config.FIELD_TYPE_BODY][1]), (config.BoxWidth * config.BoxHeight) - 1))
 
-        self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
+        self.set_status_message(f'Размер: {self.engine.length()}')
         self.isPaused = False
         self.isStarted = True
         self.engine.start()
@@ -160,7 +157,7 @@ class GameBox(QFrame):
         self.body_gradient = list(Color(config.Colors[config.FIELD_TYPE_BODY][0]).range_to(
             Color(config.Colors[config.FIELD_TYPE_BODY][1]), (config.BoxWidth * config.BoxHeight) - 1))
 
-        self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
+        self.set_status_message(f'Размер: {self.engine.length()}')
         self.set_difficulty(self._next_diff)
         self.isPaused = False
         self.isStarted = True
@@ -180,7 +177,7 @@ class GameBox(QFrame):
         self.acc_timer.stop()
         self.isStarted = False
         self.isPaused = False
-        self.msg2Statusbar.emit(f'{message}   Размер: {self.engine.length()}')
+        self.set_status_messages((f'Размер: {self.engine.length()}', f'{message}'))
         print('< Stopped >')
         self.update()
 
@@ -193,10 +190,10 @@ class GameBox(QFrame):
         if self.isPaused:
             self.timer.stop()
             self.acc_timer.stop()
-            self.msg2Statusbar.emit('-= ПАУЗА =-')
+            self.set_status_message('-= ПАУЗА =-', index=1)
             self.update()
         else:
-            self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
+            self.set_status_message('', index=1)
             self.timer.start(self.speed, self)
             self.acc_timer.start(config.AccInterval, self)
 
@@ -207,13 +204,15 @@ class GameBox(QFrame):
         self._next_diff = new_dif
 
         if self.isStarted:
-            self.parent().setWindowTitle(f'{config.MainWindowTitle} [{self._difficulty["EngName"]}] -> '
-                                         f'[{config.Difficultys[new_dif]["EngName"]}]')
+            # self.parent().setWindowTitle(f'{config.MainWindowTitle} [{self._difficulty["EngName"]}] -> '
+            #                              f'[{config.Difficultys[new_dif]["EngName"]}]')
+            self.set_status_message(f'[{self._difficulty["EngName"]}] -> [{config.Difficultys[new_dif]["EngName"]}]',
+                                    index=2)
         else:
             self._difficulty = config.Difficultys[new_dif]
             self._dif_code = new_dif
             self.engine.difficulty = self._difficulty
-            self.parent().setWindowTitle(f'{config.MainWindowTitle} [{self._difficulty["EngName"]}]')
+            self.set_status_message(f'[{self._difficulty["EngName"]}]', index=2)
             print(f'Difficulty changed to: {self._difficulty["EngName"]}')
 
     def accelerate(self):
@@ -366,8 +365,34 @@ class GameBox(QFrame):
 
     def update_ui(self):
         if self.isStarted and not self.isPaused:
-            self.msg2Statusbar.emit(f'Размер: {self.engine.length()}')
+            self.set_status_message(f'Размер: {self.engine.length()}')
         self.update()
+
+    def set_status_messages(self, messages):
+        """
+        Записать сообщение в статусбар
+
+        :param messages: list, tuple: массив сообщений. Сообщения распределяются по индексам:
+            0 - в первую панель статусбара (слева - направо), 1 - во вторую и т.д.
+            Длина списка сообщений не должна превышать кол-во панелей статусбара. Все, что больше, будет игнорироваться
+        """
+
+        for i in range(len(messages)):
+            if i < len(self.status_labels):
+                self.status_labels[i].setText(messages[i])
+
+    def set_status_message(self, message, index=0):
+        """
+        Записать сообщение в статусбар
+
+        :param message: str: Строка сообщения.
+        :param index: int: Тндекс панели статусбара, где надо вывести сообщение
+        """
+
+        # self.statusbar.showMessage(messages)
+
+        if index < len(self.status_labels):
+            self.status_labels[index].setText(message)
 
     def draw_square(self, left, top, sq_type):
         """ отрисовка квадратика """
