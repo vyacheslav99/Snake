@@ -399,7 +399,7 @@ class GameBox(QFrame):
         Записать сообщение в статусбар
 
         :param message: str: Строка сообщения.
-        :param index: int: Тндекс панели статусбара, где надо вывести сообщение
+        :param index: int: Индекс панели статусбара, где надо вывести сообщение
         """
 
         # self.statusbar.showMessage(messages)
