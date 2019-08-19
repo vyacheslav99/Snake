@@ -258,6 +258,14 @@ class GameBox(QFrame):
                 else:
                     self.body_gradient[i] = self.body_gradient[0]
 
+    def show_help(self):
+        if self.isStarted:
+            self.pause()
+
+        QMessageBox.information(self.parent(), 'Подсказка',
+                                '\n'.join(('Клавиши управления игрой\n',) + config.HELP_KEYS +
+                                          ('--------------------\n',) + config.HELP_CHEAT_KEYS), QMessageBox.Ok)
+
     def print_debug_info(self):
         print('-= Window =-')
         print(f'Top: {self.parent().geometry().top()}')
@@ -309,6 +317,8 @@ class GameBox(QFrame):
                 self.pause()
             elif key in (Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5):
                 self.set_difficulty((Qt.Key_1, Qt.Key_2, Qt.Key_3, Qt.Key_4, Qt.Key_5).index(key) + 1)
+            elif key == Qt.Key_F1:
+                self.show_help()
             elif not self.isStarted or self.isPaused:
                 return
             elif key == Qt.Key_F5:
